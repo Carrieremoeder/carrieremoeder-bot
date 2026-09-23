@@ -1,3 +1,4 @@
+import { requireCode, sameOrigin } from '../lib/security.js';
 export const config = {
   api: {
     bodyParser: {
@@ -11,7 +12,11 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { messages } = req.body;
+  if (!sameOrigin(req)) return res.status(403).json({ error: 'Ongeldige aanvraag' });
+  try { if (!(await requireCode(req, res))) return; } catch { return res.status(500).json({ error: 'Toegangscontrole niet beschikbaar' }); }
+  res.setHeader('Cache-Control', 'no-store');
+  const { messages } = req.body || {};
+  if (!Array.isArray(messages) || !messages.length || messages.length > 30 || JSON.stringify(messages).length > 8_000_000 || messages.some(m => !['user','assistant'].includes(m?.role))) return res.status(400).json({ error: 'Ongeldig gesprek' });
   const apiKey = process.env.ANTHROPIC_API_KEY;
 
   if (!apiKey) {
@@ -99,9 +104,11 @@ Gebruik NOOIT: "eenzijdig", "rechtsgeldig", "bindend", "geldig", "blijft gelden/
       })
     });
 
+    if (!response.ok) return res.status(502).json({ error: 'De coach is tijdelijk niet beschikbaar.' });
     const data = await response.json();
-    return res.status(200).json(data);
+    return res.status(200).json({ content: data.content });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    console.error('Bot AI:', err.message);
+    return res.status(500).json({ error: 'De coach is tijdelijk niet beschikbaar.' });
   }
 }
