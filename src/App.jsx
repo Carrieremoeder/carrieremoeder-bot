@@ -233,6 +233,7 @@ export default function App() {
 
   function handleImageUpload(file) {
     if (!file) return;
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type) || file.size > 4_000_000) { alert("Gebruik een JPG, PNG of WebP van maximaal 4 MB."); return; }
     setUploadingImg(true);
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -307,7 +308,7 @@ export default function App() {
     );
   }
 
-  const quick = ["Mijn ex stuurde dit bericht — wat doe ik?", "Ik wil een grens stellen maar weet niet hoe", "Mijn ex reageert niet op mijn berichten", "Ik raak steeds getriggerd door dezelfde situatie"];
+  const quick = ["Dit bericht kreeg ik van mijn ex — wat is wijs om te doen?", "Hij stuurde iets dat me boos maakt. Hoe blijf ik rustig?", "Ik twijfel of ik moet reageren of stil moet blijven.", "Kun je helpen dit bericht te ontleden en daarna weer te herstellen?"];
 
   const CSS = `@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Inter:wght@300;400;500;600;700&display=swap");
 @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}
