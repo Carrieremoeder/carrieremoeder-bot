@@ -14,4 +14,10 @@ Gesprekken worden vóór verzending naar de opslagroute én op de server tot exp
 
 Gerichte regressietests: `node --test tests/conversationStorage.test.js`. Die testen gebruiken fictieve gegevens en een nagebootste database; zij bewijzen niet dat de live Supabase-policies juist zijn.
 
-Nog open: live accountisolatie/RLS, rate limiting, verlopen toegang, wachtwoordherstel, gelijktijdige wijzigingen, privacy/retentie en inhoudelijke AI-tests. Volgens de overdracht blokkeerde ontbrekend API-tegoed de AI; saldo en organisatie zijn tijdens deze codewijziging niet gecontroleerd.
+Nog open: live accountisolatie met twee testaccounts, rate limiting, verlopen toegang, wachtwoordherstel, gelijktijdige wijzigingen, privacy/retentie en inhoudelijke AI-tests. Volgens de overdracht blokkeerde ontbrekend API-tegoed de AI; saldo en organisatie zijn tijdens deze codewijziging niet gecontroleerd.
+
+## Live controle Supabase — 24 september 2026
+
+In de ingelogde beheeromgeving van project `carrieremoeder-bot` is op Database > Policies vastgesteld dat RLS voor zowel `public.chat` als `public.codes` ingeschakeld is (knop 'Disable RLS') en dat beide tabellen geen policies hebben. De interface vermeldt dat de Data API daarom geen rijen teruggeeft voor toegang waarop RLS van toepassing is. Er zijn geen instellingen gewijzigd en geen klantgesprekken geopend.
+
+Dit controleert de tabelpolicies, niet alle mogelijke toegangspaden: service-role-toegang omzeilt RLS en moet server-side blijven. Rechtstreekse anon-aanvragen, functies/views, grants en accountisolatie met twee testaccounts zijn nog niet getest. Het projectoverzicht vermeldde 'No backups'; herstelbaarheid moet afzonderlijk worden gecontroleerd voordat gegevens worden gewijzigd. De overzichtsstatus was 'Unhealthy', terwijl recente aanvragen een succespercentage van 100% hadden; de oorzaak van die status is nog niet vastgesteld.
