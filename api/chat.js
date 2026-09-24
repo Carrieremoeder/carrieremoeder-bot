@@ -25,7 +25,17 @@ export default async function handler(req, res) {
       method: 'POST', headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: process.env.BOT_MODEL || 'gpt-6-sol', instructions: BOT_INSTRUCTIES, input: messages.map(toOpenAI), store: false, max_output_tokens: 2200 })
     });
-    if (!response.ok) return res.status(502).json({ error: 'De coach is tijdelijk niet beschikbaar.' });
+    if (!response.ok) {
+      // Log uitsluitend metadata; nooit promptinhoud, sleutel of upstream foutbericht.
+      let upstream = {};
+      try { upstream = await response.json(); } catch {}
+      console.error('Bot AI upstream:', {
+        status: response.status,
+        type: String(upstream?.error?.type || 'unknown').slice(0, 80),
+        code: String(upstream?.error?.code || 'unknown').slice(0, 80)
+      });
+      return res.status(502).json({ error: 'De coach is tijdelijk niet beschikbaar.' });
+    }
     const data = await response.json();
     const text = (data.output || []).flatMap(item => item.content || []).filter(item => item.type === 'output_text').map(item => item.text).join('\n');
     return res.status(200).json({ content: [{ text: text || 'Er is geen antwoord ontvangen. Probeer opnieuw.' }] });
