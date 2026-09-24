@@ -1,3 +1,4 @@
+import { sanitizeConversations } from '../lib/conversationStorage.js';
 import { db, requireCode, sameOrigin } from '../lib/security.js';
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -11,11 +12,9 @@ export default async function handler(req, res) {
     if (!sameOrigin(req)) return res.status(403).end();
     const conversations = req.method === 'DELETE' ? [] : req.body?.conversations;
     if (!Array.isArray(conversations) || conversations.length > 100 || JSON.stringify(conversations).length > 300000) return res.status(413).json({ error: 'Gespreksgeschiedenis is te groot.' });
-    const safe = conversations.map(c => ({ ...c, messages: (c.messages || []).map(m => {
-      if (m.role !== 'user' || typeof m.content === 'string') return m;
-      const text = Array.isArray(m.content) ? m.content.find(part => part.type === 'text')?.text || '[afbeelding]' : '[afbeelding]';
-      return { role: 'user', content: text, display: text };
-    }) }));
+    let safe;
+    try { safe = sanitizeConversations(conversations); }
+    catch { return res.status(400).json({ error: 'Ongeldige gespreksgeschiedenis.' }); }
     await db('chat', { method: 'POST', data: { code, data: safe, updated_at: new Date().toISOString() } });
     return res.status(200).json({ ok: true });
   } catch (error) { console.error('Bot conversations:', error.message); return res.status(500).json({ error: 'Opslaan lukt momenteel niet.' }); }
