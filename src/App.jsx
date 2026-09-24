@@ -181,6 +181,7 @@ export default function App() {
   const [history, setHistory] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [chatError, setChatError] = useState("");
   const [pendingImg, setPendingImg] = useState(null);
   const [uploadingImg, setUploadingImg] = useState(false);
   const endRef = useRef(null);
@@ -257,6 +258,7 @@ export default function App() {
       setActiveId(id); currentId = id;
     }
 
+    setChatError("");
     setInput("");
     if (taRef.current) taRef.current.style.height = "44px";
 
@@ -279,13 +281,17 @@ export default function App() {
       const apiMessages = nh.slice(-30).map(({ role, content }) => ({ role, content }));
       const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: apiMessages }) });
       const d = await res.json();
-      const reply = d.content?.[0]?.text || "Er ging iets mis.";
+      if (!res.ok) throw new Error(d.error || "De coach is tijdelijk niet beschikbaar.");
+      const reply = d.content?.[0]?.text;
+      if (!reply) throw new Error("Er is geen antwoord ontvangen. Probeer opnieuw.");
       const newHistory = [...nh, { role: "assistant", content: reply }];
       setHistory(newHistory);
       updateCurrentConversation(newHistory, currentId);
     } catch (e) {
-      const newHistory = [...nh, { role: "assistant", content: e.message || "Er ging iets mis. Probeer opnieuw." }];
-      setHistory(newHistory);
+      setHistory(history);
+      setInput(msg);
+      if (pendingImg) setPendingImg(pendingImg);
+      setChatError(e.message || "Er ging iets mis. Probeer opnieuw.");
     }
     setLoading(false);
   }
@@ -384,6 +390,7 @@ input:focus,textarea:focus{border-color:#B8735A!important;outline:none}
                 </div>
               )}
               <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleImageUpload(e.target.files[0])} />
+              {chatError && <p role="alert" style={g.err}>{chatError} Je bericht staat nog klaar om opnieuw te versturen.</p>}
               <div style={g.inputRow}>
                 <button onClick={() => fileRef.current?.click()} disabled={uploadingImg} style={g.attachBtn(!!pendingImg)} title="Screenshot uploaden">
                   {uploadingImg ? "…" : "📎"}
