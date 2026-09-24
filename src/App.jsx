@@ -1,37 +1,16 @@
 import { useState, useEffect, useRef } from "react";
 
-const SUPABASE_URL = "https://yvdkzswqfwycpoifxdxd.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl2ZGt6c3dxZnd5Y3BvaWZ4ZHhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1NzUxMTMsImV4cCI6MjA5ODE1MTExM30.usY5clEQYkauWBFrGmWbA6ppVi6_ranPOYmm-2W9qsc";
-
-const store = {
-  get: (k) => { try { const r = localStorage.getItem(k); return r ? JSON.parse(r) : null; } catch { return null; } },
-  set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
-};
-
-const sb = {
-  async get(table, code) {
-    try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?code=eq.${encodeURIComponent(code)}&limit=1`, {
-        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
-      });
-      const rows = await res.json();
-      return rows?.[0]?.data ?? null;
-    } catch { return null; }
-  },
-  async set(table, code, data) {
-    try {
-      await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-        method: "POST",
-        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" },
-        body: JSON.stringify({ code, data, updated_at: new Date().toISOString() })
-      });
-    } catch {}
-  }
-};
+async function api(path, options = {}) {
+  const res = await fetch(`/api/${path}`, { credentials: "same-origin", headers: { "Content-Type": "application/json" }, ...options });
+  const data = res.status === 204 ? {} : await res.json();
+  if (!res.ok) throw new Error(data.error || "Er ging iets mis.");
+  return data;
+}
 
 function md(text) {
   if (!text) return "";
   return text
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
     .replace(/^#{1,3} (.+)$/gm, "<strong style='font-size:14px;display:block;margin-top:10px;margin-bottom:2px;color:#1C1410'>$1</strong>")
     .replace(/\n{3,}/g, "\n\n")
@@ -128,18 +107,11 @@ function Login({ onLogin }) {
   const [loading, setLoading] = useState(false);
 
   async function checkCode() {
-    const c = code.trim().toUpperCase();
-    if (!c) { setErr("Vul een toegangscode in."); return; }
     setLoading(true); setErr("");
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/codes?code=eq.${encodeURIComponent(c)}&actief=eq.true&limit=1`, {
-        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
-      });
-      const rows = await res.json();
-      if (rows.length === 0) setErr("Code niet herkend. De Always In Control Bot is te koop via www.carrieremoeder.com");
-      else if (rows[0].wachtwoord) setStap("wachtwoord-in");
-      else setStap("wachtwoord-nieuw");
-    } catch { setErr("Er ging iets mis. Probeer opnieuw."); }
+      const data = await api("session", { method: "POST", body: JSON.stringify({ action: "check", code }) });
+      setStap(data.needsPassword ? "wachtwoord-in" : "wachtwoord-nieuw");
+    } catch (e) { setErr(e.message); }
     setLoading(false);
   }
 
@@ -147,32 +119,15 @@ function Login({ onLogin }) {
     if (nieuwWachtwoord.length < 8) { setErr("Kies een wachtwoord van minimaal 8 tekens."); return; }
     if (nieuwWachtwoord !== bevestig) { setErr("Wachtwoorden komen niet overeen."); return; }
     setLoading(true); setErr("");
-    const c = code.trim().toUpperCase();
-    try {
-      const hash = btoa(nieuwWachtwoord + c);
-      await fetch(`${SUPABASE_URL}/rest/v1/codes?code=eq.${encodeURIComponent(c)}`, {
-        method: "PATCH",
-        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ wachtwoord: hash })
-      });
-      store.set("bot_user_code", c); onLogin(c);
-    } catch { setErr("Er ging iets mis."); }
+    try { await api("session", { method: "POST", body: JSON.stringify({ action: "register", code, password: nieuwWachtwoord }) }); onLogin(); }
+    catch (e) { setErr(e.message); }
     setLoading(false);
   }
 
   async function controleerWachtwoord() {
-    if (!wachtwoord) { setErr("Vul je wachtwoord in."); return; }
     setLoading(true); setErr("");
-    const c = code.trim().toUpperCase();
-    try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/codes?code=eq.${encodeURIComponent(c)}&actief=eq.true&limit=1`, {
-        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
-      });
-      const rows = await res.json();
-      if (!rows.length) { setErr("Code niet gevonden."); setLoading(false); return; }
-      if (rows[0].wachtwoord === btoa(wachtwoord + c)) { store.set("bot_user_code", c); onLogin(c); }
-      else setErr("Onjuist wachtwoord.");
-    } catch { setErr("Er ging iets mis."); }
+    try { await api("session", { method: "POST", body: JSON.stringify({ action: "login", code, password: wachtwoord }) }); onLogin(); }
+    catch (e) { setErr(e.message); }
     setLoading(false);
   }
 
@@ -219,8 +174,8 @@ function Login({ onLogin }) {
 }
 
 export default function App() {
-  const [loggedIn, setLoggedIn] = useState(() => !!store.get("bot_user_code"));
-  const [userCode, setUserCode] = useState(() => store.get("bot_user_code") || "");
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [checking, setChecking] = useState(true);
   const [conversations, setConversations] = useState([]);
   const [activeId, setActiveId] = useState(null);
   const [history, setHistory] = useState([]);
@@ -233,24 +188,34 @@ export default function App() {
   const fileRef = useRef(null);
 
   useEffect(() => {
-    if (!loggedIn || !userCode) return;
-    sb.get("chat", userCode).then(data => {
-      if (data && Array.isArray(data)) {
-        setConversations(data);
-        if (data.length > 0) { setActiveId(data[0].id); setHistory(data[0].messages || []); }
+    api("session").then(() => setLoggedIn(true)).catch(() => {}).finally(() => setChecking(false));
+  }, []);
+  useEffect(() => {
+    if (!loggedIn) return;
+    api("conversations").then(data => {
+      if (Array.isArray(data.conversations)) {
+        setConversations(data.conversations);
+        if (data.conversations.length) { setActiveId(data.conversations[0].id); setHistory(data.conversations[0].messages || []); }
       }
-    });
-  }, [loggedIn, userCode]);
+    }).catch(() => {});
+  }, [loggedIn]);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [history, loading]);
 
-  function saveConversations(convs) { setConversations(convs); sb.set("chat", userCode, convs); }
+  function saveConversations(convs) { setConversations(convs); api("conversations", { method: "PUT", body: JSON.stringify({ conversations: convs }) }).catch(() => { alert("Gesprek opslaan is niet gelukt. Kopieer belangrijke tekst voordat je de pagina sluit."); }); }
 
   function newConversation() {
     const id = Date.now();
     const conv = { id, title: "Nieuw gesprek", date: new Date().toLocaleDateString("nl-NL"), messages: [] };
     const updated = [conv, ...conversations];
     saveConversations(updated); setActiveId(id); setHistory([]); setPendingImg(null);
+  }
+
+  function deleteConversation(id) {
+    if (!window.confirm("Dit gesprek definitief uit de actieve database verwijderen?")) return;
+    const updated = conversations.filter(c => c.id !== id);
+    saveConversations(updated);
+    if (activeId === id) { setActiveId(updated[0]?.id || null); setHistory(updated[0]?.messages || []); }
   }
 
   function loadConversation(conv) { setActiveId(conv.id); setHistory(conv.messages || []); setPendingImg(null); }
@@ -268,6 +233,7 @@ export default function App() {
 
   function handleImageUpload(file) {
     if (!file) return;
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type) || file.size > 4_000_000) { alert("Gebruik een JPG, PNG of WebP van maximaal 4 MB."); return; }
     setUploadingImg(true);
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -310,21 +276,21 @@ export default function App() {
     setHistory(nh); setPendingImg(null); setLoading(true);
 
     try {
-      const apiMessages = nh.map(({ role, content }) => ({ role, content }));
+      const apiMessages = nh.slice(-30).map(({ role, content }) => ({ role, content }));
       const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: apiMessages }) });
       const d = await res.json();
       const reply = d.content?.[0]?.text || "Er ging iets mis.";
       const newHistory = [...nh, { role: "assistant", content: reply }];
       setHistory(newHistory);
       updateCurrentConversation(newHistory, currentId);
-    } catch {
-      const newHistory = [...nh, { role: "assistant", content: "Er ging iets mis. Probeer opnieuw." }];
+    } catch (e) {
+      const newHistory = [...nh, { role: "assistant", content: e.message || "Er ging iets mis. Probeer opnieuw." }];
       setHistory(newHistory);
     }
     setLoading(false);
   }
 
-  function logout() { setLoggedIn(false); setUserCode(""); store.set("bot_user_code", ""); setHistory([]); setConversations([]); setActiveId(null); }
+  function logout() { api("session", { method: "DELETE" }).catch(() => {}); setLoggedIn(false); setHistory([]); setConversations([]); setActiveId(null); }
 
   function renderMessage(m, i) {
     const display = m.display || m.content;
@@ -342,7 +308,7 @@ export default function App() {
     );
   }
 
-  const quick = ["Mijn ex stuurde dit bericht — wat doe ik?", "Ik wil een grens stellen maar weet niet hoe", "Mijn ex reageert niet op mijn berichten", "Ik raak steeds getriggerd door dezelfde situatie"];
+  const quick = ["Dit bericht kreeg ik van mijn ex — wat is wijs om te doen?", "Hij stuurde iets dat me boos maakt. Hoe blijf ik rustig?", "Ik twijfel of ik moet reageren of stil moet blijven.", "Kun je helpen dit bericht te ontleden en daarna weer te herstellen?"];
 
   const CSS = `@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Inter:wght@300;400;500;600;700&display=swap");
 @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}
@@ -351,10 +317,11 @@ button:hover{opacity:.85}
 input:focus,textarea:focus{border-color:#B8735A!important;outline:none}
 ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:#E0D8D4;border-radius:2px}`;
 
+  if (checking) return <div style={g.page}>Toegang controleren…</div>;
   if (!loggedIn) return (
     <div style={{ ...g.page, background: C.white }}>
       <style>{CSS}</style>
-      <Login onLogin={(code) => { setLoggedIn(true); setUserCode(code); store.set("bot_user_code", code); }} />
+      <Login onLogin={() => setLoggedIn(true)} />
     </div>
   );
 
@@ -381,7 +348,7 @@ input:focus,textarea:focus{border-color:#B8735A!important;outline:none}
           {conversations.map(conv => (
             <div key={conv.id} style={g.convItem(conv.id === activeId)} onClick={() => loadConversation(conv)}>
               <div style={g.convTitle(conv.id === activeId)}>{conv.title}</div>
-              <div style={g.convDate}>{conv.date}</div>
+              <div style={g.convDate}>{conv.date} <button type="button" aria-label="Gesprek verwijderen" onClick={e => { e.stopPropagation(); deleteConversation(conv.id); }} style={{ border: "none", background: "transparent", color: C.muted, cursor: "pointer", float: "right" }}>Verwijder</button></div>
             </div>
           ))}
         </div>
@@ -429,7 +396,7 @@ input:focus,textarea:focus{border-color:#B8735A!important;outline:none}
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: "6px" }}>
                 <span style={{ fontSize: "10px", color: "#C8B8B0" }}>Shift+Enter voor nieuwe regel · 📎 voor screenshot</span>
-                <span style={{ fontSize: "10px", color: "#C8B8B0" }}>⚠ Deel geen persoonsgegevens</span>
+                <span style={{ fontSize: "10px", color: "#C8B8B0" }}>Maak namen en andere herkenbare details onleesbaar vóór je iets deelt</span>
               </div>
             </div>
           </div>
