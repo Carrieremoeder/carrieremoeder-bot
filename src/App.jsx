@@ -1,3 +1,4 @@
+import { sanitizeConversations } from '../lib/conversationStorage.js';
 import { useState, useEffect, useRef } from "react";
 
 async function api(path, options = {}) {
@@ -203,7 +204,7 @@ export default function App() {
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [history, loading]);
 
-  function saveConversations(convs) { setConversations(convs); api("conversations", { method: "PUT", body: JSON.stringify({ conversations: convs }) }).catch(() => { alert("Gesprek opslaan is niet gelukt. Kopieer belangrijke tekst voordat je de pagina sluit."); }); }
+  function saveConversations(convs) { setConversations(convs); api("conversations", { method: "PUT", body: JSON.stringify({ conversations: sanitizeConversations(convs) }) }).catch(() => { alert("Gesprek opslaan is niet gelukt. Kopieer belangrijke tekst voordat je de pagina sluit."); }); }
 
   function newConversation() {
     const id = Date.now();
