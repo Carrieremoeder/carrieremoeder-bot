@@ -21,3 +21,9 @@ Nog open: live accountisolatie met twee testaccounts, rate limiting, verlopen to
 In de ingelogde beheeromgeving van project `carrieremoeder-bot` is op Database > Policies vastgesteld dat RLS voor zowel `public.chat` als `public.codes` ingeschakeld is (knop 'Disable RLS') en dat beide tabellen geen policies hebben. De interface vermeldt dat de Data API daarom geen rijen teruggeeft voor toegang waarop RLS van toepassing is. Er zijn geen instellingen gewijzigd en geen klantgesprekken geopend.
 
 Dit controleert de tabelpolicies, niet alle mogelijke toegangspaden: service-role-toegang omzeilt RLS en moet server-side blijven. Rechtstreekse anon-aanvragen, functies/views, grants en accountisolatie met twee testaccounts zijn nog niet getest. Het projectoverzicht vermeldde 'No backups'; herstelbaarheid moet afzonderlijk worden gecontroleerd voordat gegevens worden gewijzigd. De overzichtsstatus was 'Unhealthy', terwijl recente aanvragen een succespercentage van 100% hadden; de oorzaak van die status is nog niet vastgesteld.
+
+## Vervolgcontrole — 24 september 2026
+
+Het projectoverzicht toont bij de vervolgcontrole 'Healthy'. Er is geen herstart of configuratiewijziging uitgevoerd; de oorzaak van de eerdere status is niet vastgesteld. Database > Backups bevestigt expliciet dat het Free Plan geen projectback-ups omvat. Er is geen betaald abonnement aangezet; een herstelstrategie blijft nodig.
+
+Testcommando: `node --test tests/conversationStorage.test.js tests/accountIsolation.test.js` — 5 tests geslaagd. De extra test gebruikt twee fictieve accounts met ondertekende cookies en een nagebootste database. Lezen, schrijven en wissen blijven bij de sessiecode, ook bij een afwijkende code in body/query. Ontbrekende, vervalste en verlopen sessies, een ingetrokken code en een verkeerde origin worden afgewezen. Dit is een test van de servercode, geen live end-to-end test met Supabase of de browser. Er zijn geen live testaccounts aangemaakt.
