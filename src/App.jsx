@@ -2,9 +2,12 @@ import { readCoachReply } from "../lib/coachStream.js";
 import * as K from "./designTokens.js";
 import { brandLogo } from "./brandLogo.js";
 import { useState, useEffect, useRef } from "react";
+import { tabSession, WARNING_MS } from "./browserSession.js";
 
 async function api(path, options = {}) {
-  const res = await fetch(`/api/${path}`, { credentials: "same-origin", headers: { "Content-Type": "application/json" }, ...options });
+  const token = tabSession.token();
+  const res = await fetch(`/api/${path}`, { credentials: "same-origin", ...options, headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options.headers } });
+  if (token && res.status === 401 && tabSession.token() === token) tabSession.clear('expired');
   const data = res.status === 204 ? {} : await res.json();
   if (!res.ok) throw new Error(data.error || "Er ging iets mis.");
   return data;
@@ -79,7 +82,7 @@ function BrandHeader({ loggedIn = false, loading = false, sidebarOpen, onMenu, o
   </header>;
 }
 
-function Login({ onLogin }) {
+function Login({ onLogin, notice }) {
   const [code, setCode] = useState("");
   const [wachtwoord, setWachtwoord] = useState("");
   const [nieuwWachtwoord, setNieuwWachtwoord] = useState("");
@@ -101,14 +104,14 @@ function Login({ onLogin }) {
     if (nieuwWachtwoord.length < 8) { setErr("Kies een wachtwoord van minimaal 8 tekens."); return; }
     if (nieuwWachtwoord !== bevestig) { setErr("Wachtwoorden komen niet overeen."); return; }
     setLoading(true); setErr("");
-    try { await api("session", { method: "POST", body: JSON.stringify({ action: "register", code, password: nieuwWachtwoord }) }); onLogin(); }
+    try { const data = await api("session", { method: "POST", body: JSON.stringify({ action: "register", code, password: nieuwWachtwoord }) }); tabSession.start(data.token); onLogin(); }
     catch (e) { setErr(e.message); }
     setLoading(false);
   }
 
   async function controleerWachtwoord() {
     setLoading(true); setErr("");
-    try { await api("session", { method: "POST", body: JSON.stringify({ action: "login", code, password: wachtwoord }) }); onLogin(); }
+    try { const data = await api("session", { method: "POST", body: JSON.stringify({ action: "login", code, password: wachtwoord }) }); tabSession.start(data.token); onLogin(); }
     catch (e) { setErr(e.message); }
     setLoading(false);
   }
@@ -117,6 +120,7 @@ function Login({ onLogin }) {
     <div style={g.loginWrap}>
       <h1 style={g.loginH}>Always In Control Bot</h1>
       <p style={g.loginP}>Jouw persoonlijke communicatiecoach bij elk bericht van je ex.</p>
+      {notice && <p role="status" style={{ ...g.loginP, marginBottom: "20px" }}>{notice}</p>}
 
       {stap === "code" && (<>
         <div style={g.fldGrp}><label style={g.lbl}>Toegangscode</label>
@@ -163,22 +167,82 @@ export default function App() {
   const [chatError, setChatError] = useState("");
   const [pendingImg, setPendingImg] = useState(null);
   const [uploadingImg, setUploadingImg] = useState(false);
+  const [sessionNotice, setSessionNotice] = useState("");
+  const [idleSeconds, setIdleSeconds] = useState(null);
+  const sessionGeneration = useRef(0);
+  const chatController = useRef(null);
+  const imageReader = useRef(null);
   const endRef = useRef(null);
   const scrollRef = useRef(null);
   const taRef = useRef(null);
   const fileRef = useRef(null);
 
   useEffect(() => {
-    api("session").then(() => setLoggedIn(true)).catch(() => {}).finally(() => setChecking(false));
+    const unsubscribe = tabSession.subscribe(reason => {
+      sessionGeneration.current += 1;
+      chatController.current?.abort();
+      imageReader.current?.abort();
+      setLoggedIn(false); setHistory([]); setConversations([]); setActiveId(null);
+      setInput(""); setPendingImg(null); setChatError(""); setLoading(false); setUploadingImg(false); setIdleSeconds(null);
+      setSessionNotice(reason === 'idle' ? 'Je bent automatisch uitgelogd na 30 minuten zonder activiteit. Log opnieuw in om verder te gaan.' : reason === 'expired' ? 'Je sessie is verlopen. Log opnieuw in om verder te gaan.' : '');
+    });
+    let cancelled = false;
+    const generation = sessionGeneration.current;
+    if (tabSession.token()) {
+      api("session").then(() => { if (!cancelled && generation === sessionGeneration.current && tabSession.token()) setLoggedIn(true); })
+        .catch(() => tabSession.clear('expired')).finally(() => { if (!cancelled) setChecking(false); });
+    } else setChecking(false);
+    return () => { cancelled = true; unsubscribe(); };
   }, []);
   useEffect(() => {
     if (!loggedIn) return;
+    let renewedActivity = tabSession.lastActive();
+    let renewing = false;
+    let lastAttempt = 0;
+    let cancelled = false;
+    const generation = sessionGeneration.current;
+    async function check() {
+      const remaining = tabSession.remaining();
+      if (!remaining) return;
+      setIdleSeconds(remaining <= WARNING_MS ? Math.ceil(remaining / 1000) : null);
+      const activity = tabSession.lastActive();
+      if (activity > renewedActivity && !renewing && Date.now() - lastAttempt >= 15_000) {
+        renewing = true; lastAttempt = Date.now();
+        try {
+          const data = await api('session', { method: 'POST', body: JSON.stringify({ action: 'renew' }) });
+          if (!cancelled && generation === sessionGeneration.current && tabSession.token()) { tabSession.replace(data.token); renewedActivity = activity; }
+        } catch { /* Network failures retry while the local idle deadline still applies. */ }
+        finally { renewing = false; }
+      }
+    }
+    function activity(event) { if (event.isTrusted && tabSession.touch()) { setIdleSeconds(null); check(); } }
+    function wake() { check(); }
+    const events = ['pointerdown', 'keydown', 'input', 'wheel', 'touchstart'];
+    events.forEach(name => window.addEventListener(name, activity, { passive: true }));
+    window.addEventListener('focus', wake);
+    window.addEventListener('pageshow', wake);
+    document.addEventListener('visibilitychange', wake);
+    const timer = window.setInterval(check, 1000);
+    check();
+    return () => {
+      cancelled = true; clearInterval(timer);
+      events.forEach(name => window.removeEventListener(name, activity));
+      window.removeEventListener('focus', wake); window.removeEventListener('pageshow', wake);
+      document.removeEventListener('visibilitychange', wake);
+    };
+  }, [loggedIn]);
+  useEffect(() => {
+    if (!loggedIn) return;
+    let cancelled = false;
+    const generation = sessionGeneration.current;
     api("conversations").then(data => {
+      if (cancelled || generation !== sessionGeneration.current || !tabSession.token()) return;
       if (Array.isArray(data.conversations)) {
         setConversations(data.conversations);
         if (data.conversations.length) { setActiveId(data.conversations[0].id); setHistory(data.conversations[0].messages || []); }
       }
     }).catch(() => {});
+    return () => { cancelled = true; };
   }, [loggedIn]);
 
   useEffect(() => {
@@ -192,7 +256,7 @@ export default function App() {
     else scrollRef.current?.scrollTo({ top: 0 });
   }, [history, loading]);
 
-  function saveConversations(convs) { setConversations(convs); api("conversations", { method: "PUT", body: JSON.stringify({ conversations: convs }) }).catch(() => { alert("Gesprek opslaan is niet gelukt. Kopieer belangrijke tekst voordat je de pagina sluit."); }); }
+  function saveConversations(convs) { if (!tabSession.token()) return; setConversations(convs); api("conversations", { method: "PUT", body: JSON.stringify({ conversations: convs }) }).catch(() => { if (tabSession.token()) alert("Gesprek opslaan is niet gelukt. Kopieer belangrijke tekst voordat je de pagina sluit."); }); }
 
   function closeMobileMenu() { if (window.innerWidth <= 720) setSidebarOpen(false); }
 
@@ -231,7 +295,10 @@ export default function App() {
     if (!["image/png", "image/jpeg", "image/webp"].includes(file.type) || file.size > 4_000_000) { alert("Gebruik een JPG, PNG of WebP van maximaal 4 MB."); return; }
     setUploadingImg(true);
     const reader = new FileReader();
+    imageReader.current = reader;
+    const generation = sessionGeneration.current;
     reader.onload = (e) => {
+      if (generation !== sessionGeneration.current || !tabSession.token()) return;
       setPendingImg({ base64: e.target.result.split(",")[1], type: file.type, name: file.name, preview: e.target.result });
       setUploadingImg(false);
     };
@@ -239,6 +306,8 @@ export default function App() {
   }
 
   async function send() {
+    if (!tabSession.token()) return;
+    const generation = sessionGeneration.current;
     const msg = input.trim();
     if ((!msg && !pendingImg) || loading) return;
 
@@ -270,26 +339,33 @@ export default function App() {
     const userMsg = { role: "user", content: userContent, display: displayContent };
     const nh = [...history, userMsg];
     setHistory(nh); setPendingImg(null); setLoading(true);
+    const controller = new AbortController();
+    chatController.current = controller;
 
     try {
       const apiMessages = nh.slice(-30).map(({ role, content }) => ({ role, content }));
-      const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: apiMessages, stream: true }) });
+      const res = await fetch("/api/chat", { method: "POST", signal: controller.signal, headers: { "Content-Type": "application/json", Authorization: `Bearer ${tabSession.token()}` }, body: JSON.stringify({ messages: apiMessages, stream: true }) });
+      if (generation !== sessionGeneration.current || !tabSession.token()) return;
+      if (res.status === 401) { tabSession.clear('expired'); return; }
       const reply = await readCoachReply(res, text => {
+        if (generation !== sessionGeneration.current || !tabSession.token()) return;
         setHistory([...nh, { role: "assistant", content: text }]);
       });
+      if (generation !== sessionGeneration.current || !tabSession.token()) return;
       const newHistory = [...nh, { role: "assistant", content: reply }];
       setHistory(newHistory);
       updateCurrentConversation(newHistory, currentId, currentConvs);
     } catch (e) {
+      if (generation !== sessionGeneration.current || !tabSession.token()) return;
       setHistory(history);
       setInput(msg);
       if (pendingImg) setPendingImg(pendingImg);
       setChatError(e.message || "Er ging iets mis. Probeer opnieuw.");
     }
-    setLoading(false);
+    if (generation === sessionGeneration.current) setLoading(false);
   }
 
-  function logout() { api("session", { method: "DELETE" }).catch(() => {}); setLoggedIn(false); setHistory([]); setConversations([]); setActiveId(null); }
+  function logout() { tabSession.clear(); api("session", { method: "DELETE" }).catch(() => {}); }
 
   function renderMessage(m, i) {
     const display = m.display || m.content;
@@ -336,14 +412,19 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
     <div style={{ ...g.page, overflowY: "auto" }}>
       <style>{CSS}</style>
       <BrandHeader />
-      <Login onLogin={() => setLoggedIn(true)} />
+      <Login notice={sessionNotice} onLogin={() => { setSessionNotice(""); setLoggedIn(true); }} />
     </div>
   );
 
   return (
     <div style={g.page}>
       <style>{CSS}</style>
-      <BrandHeader loggedIn loading={loading} sidebarOpen={sidebarOpen} onMenu={() => setSidebarOpen(open => !open)} onLogout={logout} />
+      <BrandHeader loggedIn sidebarOpen={sidebarOpen} onMenu={() => setSidebarOpen(open => !open)} onLogout={logout} />
+      {idleSeconds !== null && <div role="alert" style={{ padding: "12px 18px", background: C.light, borderBottom: `1px solid ${C.border}`, display: "flex", flexWrap: "wrap", alignItems: "center", gap: "10px" }}>
+        <span>Je wordt over {idleSeconds} seconden automatisch uitgelogd. Niet-verstuurde tekst wordt gewist.</span>
+        <button style={g.ghostBtn} onClick={() => { if (tabSession.touch()) setIdleSeconds(null); }}>Ingelogd blijven</button>
+        <button style={g.ghostBtn} onClick={logout}>Nu uitloggen</button>
+      </div>}
 
       <div style={g.layout}>
         {sidebarOpen && <button className="menu-backdrop" aria-label="Gesprekkenmenu sluiten" onClick={() => setSidebarOpen(false)} />}
@@ -409,3 +490,4 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
     </div>
   );
 }
+
