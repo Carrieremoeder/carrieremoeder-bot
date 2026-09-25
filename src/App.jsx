@@ -164,6 +164,7 @@ export default function App() {
   const [pendingImg, setPendingImg] = useState(null);
   const [uploadingImg, setUploadingImg] = useState(false);
   const endRef = useRef(null);
+  const scrollRef = useRef(null);
   const taRef = useRef(null);
   const fileRef = useRef(null);
 
@@ -186,7 +187,10 @@ export default function App() {
     return () => window.removeEventListener("keydown", escapeMenu);
   }, []);
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [history, loading]);
+  useEffect(() => {
+    if (history.length) endRef.current?.scrollIntoView({ behavior: "smooth" });
+    else scrollRef.current?.scrollTo({ top: 0 });
+  }, [history, loading]);
 
   function saveConversations(convs) { setConversations(convs); api("conversations", { method: "PUT", body: JSON.stringify({ conversations: convs }) }).catch(() => { alert("Gesprek opslaan is niet gelukt. Kopieer belangrijke tekst voordat je de pagina sluit."); }); }
 
@@ -364,7 +368,7 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
         </aside>}
 
         <main style={g.mainArea}>
-          <div style={{ flex: 1, overflowY: "auto" }}>
+          <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
             <div className="chat-messages" style={g.msgs}>
               {history.length === 0 && (
                 <div className="welcome" style={g.emptyWrap}>
