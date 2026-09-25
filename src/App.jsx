@@ -32,7 +32,7 @@ const C = {
   light: K.kleur.vlakAccent, sidebar: K.kleur.paginaZacht,
 };
 const g = {
-  page: { fontFamily: K.font.sans, background: C.bg, height: "100dvh", minHeight: "100dvh", color: C.dark, fontSize: "14px", display: "flex", flexDirection: "column", overflow: "hidden" },
+  page: { width: "100%", maxWidth: "100%", minWidth: 0, overflowWrap: "anywhere", fontFamily: K.font.sans, background: C.bg, height: "100dvh", minHeight: "100dvh", color: C.dark, fontSize: "14px", display: "flex", flexDirection: "column", overflow: "hidden" },
   hdr: { borderBottom: `1px solid ${K.kleur.randStructuur}`, padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px 12px", background: C.bg, flexShrink: 0, zIndex: 30 },
   hdrLeft: { display: "flex", alignItems: "center", gap: "10px", minWidth: 0 },
   brand: { ...K.label, letterSpacing: "0.22em", color: C.dark },
@@ -47,7 +47,7 @@ const g = {
   btnP: K.actieKnop, btnG: K.secundaireKnop,
   err: { fontSize: "13px", color: K.kleur.gevaar, marginTop: "10px", lineHeight: 1.6 },
   fldGrp: { marginBottom: "16px" },
-  layout: { display: "flex", flex: "1 1 auto", minHeight: 0, position: "relative", overflow: "hidden" },
+  layout: { minWidth: 0, width: "100%", display: "flex", flex: "1 1 auto", minHeight: 0, position: "relative", overflow: "hidden" },
   sidebar: { width: "240px", minWidth: "240px", borderRight: `1px solid ${K.kleur.randStructuur}`, display: "flex", flexDirection: "column", background: C.sidebar, overflowY: "auto", flexShrink: 0 },
   sideHeader: { ...K.labelKlein, letterSpacing: "0.2em", padding: "20px 16px 8px" },
   newBtn: { ...K.actieKnop, margin: "20px 16px 4px" },
@@ -58,9 +58,9 @@ const g = {
   msgs: { padding: "32px", maxWidth: "860px", width: "100%", margin: "0 auto" },
   bubble: role => ({ marginBottom: "16px", display: "flex", flexDirection: "column", alignItems: role === "user" ? "flex-end" : "flex-start" }),
   bLbl: { ...K.labelKlein, marginBottom: "5px" },
-  bBody: role => ({ maxWidth: role === "assistant" ? "100%" : "85%", padding: "12px 16px", background: role === "user" ? K.kleur.accentVlakLicht : C.white, color: C.dark, fontSize: "14px", lineHeight: 1.55, border: `1px solid ${role === "user" ? K.kleur.accentRandZacht : C.border}`, borderLeft: role === "assistant" ? `2px solid ${K.kleur.accentSteun}` : undefined, overflowWrap: "anywhere" }),
+  bBody: role => ({ minWidth: 0, maxWidth: role === "assistant" ? "100%" : "85%", padding: "12px 16px", background: role === "user" ? K.kleur.accentVlakLicht : C.white, color: C.dark, fontSize: "14px", lineHeight: 1.55, border: `1px solid ${role === "user" ? K.kleur.accentRandZacht : C.border}`, borderLeft: role === "assistant" ? `2px solid ${K.kleur.accentSteun}` : undefined, overflowWrap: "anywhere" }),
   inputBar: { padding: "18px 32px 16px", maxWidth: "860px", width: "100%", margin: "0 auto" },
-  inputBarOuter: { borderTop: `1px solid ${K.kleur.randStructuur}`, background: C.bg, flexShrink: 0 },
+  inputBarOuter: { minWidth: 0, maxWidth: "100%", borderTop: `1px solid ${K.kleur.randStructuur}`, background: C.bg, flexShrink: 0 },
   inputRow: { display: "flex", gap: "8px", alignItems: "flex-end" },
   chatTa: { flex: 1, minWidth: 0, padding: "12px 14px", fontSize: "14px", border: `1px solid ${K.kleur.randVeld}`, borderRadius: 0, fontFamily: K.font.sans, resize: "none", lineHeight: 1.6, minHeight: "46px", maxHeight: "120px", color: C.dark, background: C.white },
   sendBtn: disabled => ({ ...K.actieKnop, padding: "10px 16px", minHeight: "46px", fontSize: "18px", opacity: disabled ? 0.45 : 1 }),
@@ -124,7 +124,7 @@ function Login({ onLogin, notice }) {
 
       {stap === "code" && (<>
         <div style={g.fldGrp}><label style={g.lbl}>Toegangscode</label>
-          <input style={g.inp} value={code} onChange={e => setCode(e.target.value)} onKeyDown={e => e.key === "Enter" && checkCode()} placeholder="Jouw toegangscode" autoFocus /></div>
+          <input style={g.inp} value={code} onChange={e => setCode(e.target.value)} onKeyDown={e => e.key === "Enter" && checkCode()} placeholder="Jouw toegangscode" autoFocus={window.matchMedia("(min-width: 721px) and (pointer: fine)").matches} /></div>
         {err && <p style={g.err}>{err}</p>}
         <button style={{ ...g.btnP, width: "100%", marginTop: "4px", opacity: loading ? 0.6 : 1 }} onClick={checkCode} disabled={loading}>{loading ? "Controleren..." : "Volgende →"}</button>
       </>)}
@@ -134,7 +134,7 @@ function Login({ onLogin, notice }) {
           Welkom! Kies een persoonlijk wachtwoord voor je account.
         </div>
         <div style={g.fldGrp}><label style={g.lbl}>Nieuw wachtwoord</label>
-          <input style={g.inp} type="password" value={nieuwWachtwoord} onChange={e => setNieuwWachtwoord(e.target.value)} placeholder="Minimaal 8 tekens" autoFocus /></div>
+          <input style={g.inp} type="password" value={nieuwWachtwoord} onChange={e => setNieuwWachtwoord(e.target.value)} placeholder="Minimaal 8 tekens" autoFocus={window.matchMedia("(min-width: 721px) and (pointer: fine)").matches} /></div>
         <div style={g.fldGrp}><label style={g.lbl}>Bevestig wachtwoord</label>
           <input style={g.inp} type="password" value={bevestig} onChange={e => setBevestig(e.target.value)} onKeyDown={e => e.key === "Enter" && maakWachtwoord()} placeholder="Herhaal wachtwoord" /></div>
         {err && <p style={g.err}>{err}</p>}
@@ -144,7 +144,7 @@ function Login({ onLogin, notice }) {
 
       {stap === "wachtwoord-in" && (<>
         <div style={g.fldGrp}><label style={g.lbl}>Wachtwoord</label>
-          <input style={g.inp} type="password" value={wachtwoord} onChange={e => setWachtwoord(e.target.value)} onKeyDown={e => e.key === "Enter" && controleerWachtwoord()} placeholder="Jouw wachtwoord" autoFocus /></div>
+          <input style={g.inp} type="password" value={wachtwoord} onChange={e => setWachtwoord(e.target.value)} onKeyDown={e => e.key === "Enter" && controleerWachtwoord()} placeholder="Jouw wachtwoord" autoFocus={window.matchMedia("(min-width: 721px) and (pointer: fine)").matches} /></div>
         {err && <p style={g.err}>{err}</p>}
         <button style={{ ...g.btnP, width: "100%", marginTop: "4px", opacity: loading ? 0.6 : 1 }} onClick={controleerWachtwoord} disabled={loading}>{loading ? "Controleren..." : "Inloggen →"}</button>
         <button style={{ ...g.btnG, width: "100%", marginTop: "8px" }} onClick={() => setStap("code")}>← Terug</button>
@@ -244,6 +244,13 @@ export default function App() {
     }).catch(() => {});
     return () => { cancelled = true; };
   }, [loggedIn]);
+
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 720px)");
+    const updateMenu = () => setSidebarOpen(!query.matches);
+    query.addEventListener("change", updateMenu);
+    return () => query.removeEventListener("change", updateMenu);
+  }, []);
 
   useEffect(() => {
     function escapeMenu(e) { if (e.key === "Escape") setSidebarOpen(false); }
@@ -385,7 +392,8 @@ export default function App() {
 
   const CSS = `@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Inter:wght@400;500;600;700&display=swap");
 ${K.TOKENS_CSS}
-*{box-sizing:border-box}body{margin:0;background:var(--vlak-pagina)}
+*{box-sizing:border-box}html,body,#root{width:100%;min-width:0;margin:0}html{-webkit-text-size-adjust:100%;text-size-adjust:100%}body{background:var(--vlak-pagina)}
+.hdr-brand{max-width:100%}.brand-logo{max-width:100%;object-fit:contain}.coach-answer{min-width:0;max-width:100%;overflow-wrap:anywhere}
 button,textarea,input{font:inherit}button:disabled{cursor:default;opacity:.5}
 button:not(:disabled):hover{background:var(--accent-vlak)}
 button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
@@ -394,14 +402,15 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
 .reply-paragraph + .reply-paragraph{margin-top:7px}.reply-heading{display:inline-block;font-size:14px;line-height:1.5}.reply-paragraph:empty{display:none}
 .menu-backdrop{display:none}
 @media(max-width:720px){
-.hdr-bar{padding:12px 14px!important}.hdr-brand{flex-wrap:wrap;gap:8px!important}
-.hdr-sub{font-size:9px!important}.hdr-divider{display:none!important}
+.hdr-bar{padding:12px max(14px,env(safe-area-inset-right)) 12px max(14px,env(safe-area-inset-left))!important}.hdr-brand{flex:1 1 180px;flex-wrap:wrap;gap:8px!important}
+.hdr-sub{font-size:9px!important;white-space:normal!important;overflow-wrap:anywhere}.hdr-divider{display:none!important}
 .brand-logo{height:32px!important}.hdr-bar>button{padding:8px!important;font-size:9px!important}
 .chat-sidebar{position:absolute;inset:0 auto 0 0;z-index:20;width:min(280px,85vw)!important;min-width:0!important}
 .menu-backdrop{display:block;position:absolute;inset:0;background:rgba(28,20,16,.22);border:0;z-index:19}
 .chat-messages{padding:24px 18px!important}.welcome{padding:0 0 18px!important}
 .welcome h2{font-size:34px!important}
-.composer{padding:14px 14px max(14px,env(safe-area-inset-bottom))!important}.composer textarea{font-size:16px!important}
+.composer{padding:14px max(14px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))!important}input,textarea,select{font-size:16px!important}
+.composer button{flex-shrink:0}.composer-hints>span{min-width:0;overflow-wrap:anywhere}
 .composer-hints{flex-direction:column;gap:5px}.keyboard-hint{display:none}
 }
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
@@ -463,7 +472,7 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
               {pendingImg && (
                 <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px", padding: "8px 12px", background: C.light, borderRadius: "6px" }}>
                   <img src={pendingImg.preview} alt="" style={{ maxWidth: "50px", maxHeight: "34px", borderRadius: "3px" }} />
-                  <span style={{ fontSize: "12px", color: K.kleur.tekstZacht, flex: 1 }}>{pendingImg.name}</span>
+                  <span style={{ fontSize: "12px", color: K.kleur.tekstZacht, flex: 1, minWidth: 0, overflowWrap: "anywhere" }}>{pendingImg.name}</span>
                   <button onClick={() => setPendingImg(null)} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: "16px" }}>×</button>
                 </div>
               )}
