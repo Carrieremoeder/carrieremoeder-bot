@@ -19,10 +19,10 @@ test('Claude coach contract and authentication', async t => {
       if (url.startsWith(process.env.SUPABASE_URL)) return new Response(JSON.stringify([{ code: 'TEST-CODE' }]));
       calls.push({ url, ...init, body: JSON.parse(init.body) });
       if (upstream instanceof Error) throw upstream;
-      return new Response(JSON.stringify(upstream || { content: [{ type: 'text', text: 'Ik help je.' }] }), { status: options.status || 200 });
+      return new Response(typeof upstream === 'string' ? upstream : JSON.stringify(upstream || { content: [{ type: 'text', text: 'Ik help je.' }] }), { status: options.status || 200 });
     };
-    const res = { setHeader() {}, status(n) { this.code = n; return this; }, json(data) { this.data = data; return this; }, end() {} };
-    await handler({ method: 'POST', headers: { host: 'bot.example', origin: options.origin || 'https://bot.example', cookie: options.anonymous ? '' : cookie }, body: { messages } }, res);
+    const res = { chunks: [], setHeader() {}, write(chunk) { this.chunks.push(chunk); }, status(n) { this.code = n; return this; }, json(data) { this.data = data; return this; }, end() { this.ended = true; } };
+    await handler({ method: 'POST', headers: { host: 'bot.example', origin: options.origin || 'https://bot.example', cookie: options.anonymous ? '' : cookie }, body: { messages, stream: options.stream } }, res);
     return res;
   }
   await t.test('text, history and images reach Claude with server instructions', async () => {
@@ -45,6 +45,22 @@ test('Claude coach contract and authentication', async t => {
     for (const content of [[null], [{ type: 'image', source: { media_type: 'text/html', data: 'YWJj' } }], {}]) {
       assert.equal((await run([{ role: 'user', content }])).code, 400);
       assert.equal(calls.length, 0);
+    }
+  });
+  await t.test('stream forwards text only, requires completion and hides upstream errors', async () => {
+    const frame = e => 'data: ' + JSON.stringify(e) + '\n\n';
+    const delta = { type: 'content_block_delta', delta: { type: 'text_delta', text: 'Rustig aan.' } };
+    upstream = frame({ type: 'ping' }) + frame(delta) + frame({ type: 'message_stop' });
+    let res = await run([{ role: 'user', content: 'Hoi' }], { stream: true });
+    assert.equal(calls[0].body.stream, true);
+    assert.equal(res.chunks.join(''), frame({ type: 'text', text: 'Rustig aan.' }) + frame({ type: 'done' }));
+    assert.ok(res.ended);
+    for (const ending of ['', frame({ type: 'error', error: { message: 'private detail' } })]) {
+      upstream = frame(delta) + ending;
+      res = await run([{ role: 'user', content: 'Hoi' }], { stream: true });
+      assert.ok(res.chunks.join('').includes('"type":"error"'));
+      assert.ok(!res.chunks.join('').includes('private detail'));
+      assert.ok(!res.chunks.join('').includes('"type":"done"'));
     }
   });
   await t.test('upstream errors and empty answers are failures, not saved replies', async () => {
