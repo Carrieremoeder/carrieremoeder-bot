@@ -372,7 +372,7 @@ input:focus,textarea:focus{border-color:#B8735A!important;outline:none}
                 </div>
               )}
               {history.map((m, i) => renderMessage(m, i))}
-              {loading && (
+              {loading && history[history.length - 1]?.role !== "assistant" && (
                 <div style={g.bubble("assistant")}>
                   <div style={g.bLbl}>Always In Control Bot</div>
                   <div style={g.bBody("assistant")}><span style={g.dot("0s")} /><span style={g.dot("0.2s")} /><span style={g.dot("0.4s")} /></div>
