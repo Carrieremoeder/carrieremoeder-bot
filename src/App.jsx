@@ -14,11 +14,13 @@ function md(text) {
   if (!text) return "";
   return text
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-    .replace(/^#{1,3} (.+)$/gm, "<strong style='font-size:14px;display:block;margin-top:10px;margin-bottom:2px;color:#1C1410'>$1</strong>")
-    .replace(/\n{3,}/g, "\n\n")
-    .replace(/\n\n/g, "<br/><br style='line-height:0.5'/>")
-    .replace(/\n/g, "<br/>");
+    .replace(/^\s*---+\s*$/gm, "")
+    .trim().split(/\n\s*\n/)
+    .map(part => '<div class="reply-paragraph">' + part
+      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+      .replace(/^#{1,3} (.+)$/gm, '<strong class="reply-heading">$1</strong>')
+      .replace(/\n/g, "<br/>") + '</div>')
+    .join("");
 }
 
 const C = {
@@ -51,9 +53,9 @@ const g = {
   convDate: { fontSize: "10px", color: C.muted, marginTop: "6px", display: "flex", justifyContent: "space-between", alignItems: "center" },
   mainArea: { flex: 1, minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" },
   msgs: { padding: "32px", maxWidth: "860px", width: "100%", margin: "0 auto" },
-  bubble: role => ({ marginBottom: "24px", display: "flex", flexDirection: "column", alignItems: role === "user" ? "flex-end" : "flex-start" }),
-  bLbl: { ...K.labelKlein, marginBottom: "8px" },
-  bBody: role => ({ maxWidth: role === "assistant" ? "100%" : "85%", padding: "16px 20px", background: role === "user" ? K.kleur.accentVlakLicht : C.white, color: C.dark, fontSize: "14px", lineHeight: 1.8, border: `1px solid ${role === "user" ? K.kleur.accentRandZacht : C.border}`, borderLeft: role === "assistant" ? `2px solid ${K.kleur.accentSteun}` : undefined, overflowWrap: "anywhere" }),
+  bubble: role => ({ marginBottom: "16px", display: "flex", flexDirection: "column", alignItems: role === "user" ? "flex-end" : "flex-start" }),
+  bLbl: { ...K.labelKlein, marginBottom: "5px" },
+  bBody: role => ({ maxWidth: role === "assistant" ? "100%" : "85%", padding: "12px 16px", background: role === "user" ? K.kleur.accentVlakLicht : C.white, color: C.dark, fontSize: "14px", lineHeight: 1.55, border: `1px solid ${role === "user" ? K.kleur.accentRandZacht : C.border}`, borderLeft: role === "assistant" ? `2px solid ${K.kleur.accentSteun}` : undefined, overflowWrap: "anywhere" }),
   inputBar: { padding: "18px 32px 16px", maxWidth: "860px", width: "100%", margin: "0 auto" },
   inputBarOuter: { borderTop: `1px solid ${K.kleur.randStructuur}`, background: C.bg, flexShrink: 0 },
   inputRow: { display: "flex", gap: "8px", alignItems: "flex-end" },
@@ -61,11 +63,9 @@ const g = {
   sendBtn: disabled => ({ ...K.actieKnop, padding: "10px 16px", minHeight: "46px", fontSize: "18px", opacity: disabled ? 0.45 : 1 }),
   attachBtn: active => ({ ...K.secundaireKnop, padding: "10px 12px", minHeight: "46px", fontSize: "18px", background: active ? C.light : "transparent" }),
   dot: delay => ({ display: "inline-block", width: "5px", height: "5px", borderRadius: "50%", background: C.terra, margin: "0 2px", animation: "bounce 1.2s ease-in-out infinite", animationDelay: delay }),
-  emptyWrap: { padding: "44px 0 32px", maxWidth: "740px", margin: "0 auto" },
-  emptyH: { ...K.serifKop("44px"), margin: "12px 0 16px" },
-  emptyP: { fontSize: "14px", color: K.kleur.tekstZacht, lineHeight: 1.8, margin: "0 0 32px", maxWidth: "540px" },
-  quickBtns: { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "14px" },
-  quickBtn: { display: "flex", flexDirection: "column", alignItems: "flex-start", textAlign: "left", padding: "22px 18px", background: C.white, border: `1px solid ${C.border}`, color: C.dark, cursor: "pointer", fontFamily: K.font.sans, minHeight: "190px" },
+  emptyWrap: { padding: "0 0 20px", maxWidth: "740px", margin: "0 auto" },
+  emptyH: { ...K.serifKop("40px"), margin: "0 0 12px" },
+  emptyP: { fontSize: "14px", color: K.kleur.tekstZacht, lineHeight: 1.65, margin: 0, maxWidth: "540px" },
 };
 function BrandHeader({ loggedIn = false, loading = false, sidebarOpen, onMenu, onLogout }) {
   return <header style={g.hdr} className="hdr-bar">
@@ -301,18 +301,11 @@ export default function App() {
         <div style={g.bLbl}>{isUser ? "Jij" : "Always In Control Bot"}</div>
         <div style={g.bBody(m.role)}>
           {image && <img src={image} alt="bijlage" style={{ maxWidth: "180px", maxHeight: "120px", border: "1px solid #eee", display: "block", marginBottom: "8px", borderRadius: "4px" }} />}
-          {isUser ? <span>{text}</span> : <span dangerouslySetInnerHTML={{ __html: md(typeof m.content === "string" ? m.content : text) }} />}
+          {isUser ? <span>{text}</span> : <div className="coach-answer" dangerouslySetInnerHTML={{ __html: md(typeof m.content === "string" ? m.content : text) }} />}
         </div>
       </div>
     );
   }
-
-  const quick = [
-    { title: "Een bericht bespreken", detail: "Kijk rustig naar wat er staat en wat het met je doet.", draft: "Ik wil dit bericht bespreken: " },
-    { title: "Een reactie schrijven", detail: "Vind woorden die duidelijk zijn en bij jouw grenzen passen.", draft: "Help me een rustige, duidelijke reactie te schrijven op: " },
-    { title: "Eerst even rustig worden", detail: "Neem een moment voor jezelf voordat je beslist wat je doet.", draft: "Ik merk dat een bericht me raakt. Help me eerst even rustig te worden." },
-  ];
-
 
   const CSS = `@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Inter:wght@400;500;600;700&display=swap");
 ${K.TOKENS_CSS}
@@ -320,9 +313,9 @@ ${K.TOKENS_CSS}
 button,textarea,input{font:inherit}button:disabled{cursor:default;opacity:.5}
 button:not(:disabled):hover{background:var(--accent-vlak)}
 button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-.quick-card{transition:border-color .18s,transform .18s}.quick-card:hover{border-color:var(--accent-rand)!important;transform:translateY(-2px)}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:var(--rand-structuur)}
 @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}
+.reply-paragraph + .reply-paragraph{margin-top:7px}.reply-heading{display:inline-block;font-size:14px;line-height:1.5}.reply-paragraph:empty{display:none}
 .menu-backdrop{display:none}
 @media(max-width:720px){
 .hdr-bar{padding:12px 14px!important}.hdr-brand{flex-wrap:wrap;gap:8px!important}
@@ -330,9 +323,8 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
 .brand-logo{height:32px!important}.hdr-bar>button{padding:8px!important;font-size:9px!important}
 .chat-sidebar{position:absolute;inset:0 auto 0 0;z-index:20;width:min(280px,85vw)!important;min-width:0!important}
 .menu-backdrop{display:block;position:absolute;inset:0;background:rgba(28,20,16,.22);border:0;z-index:19}
-.chat-messages{padding:24px 18px!important}.welcome{padding:14px 0 20px!important}
-.welcome h2{font-size:36px!important}.quick-choices{grid-template-columns:1fr!important;gap:10px!important}
-.quick-card{min-height:0!important;padding:16px!important}.quick-card p{margin:8px 0 0!important}
+.chat-messages{padding:24px 18px!important}.welcome{padding:0 0 18px!important}
+.welcome h2{font-size:34px!important}
 .composer{padding:14px 14px max(14px,env(safe-area-inset-bottom))!important}.composer textarea{font-size:16px!important}
 .composer-hints{flex-direction:column;gap:5px}.keyboard-hint{display:none}
 }
@@ -368,20 +360,8 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
         </aside>}
 
         <main style={g.mainArea}>
-          <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+          <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: "auto", display: history.length ? "block" : "none" }}>
             <div className="chat-messages" style={g.msgs}>
-              {history.length === 0 && (
-                <div className="welcome" style={g.emptyWrap}>
-                  <span style={K.labelKlein}>Jouw persoonlijke communicatiecoach</span>
-                  <h2 style={g.emptyH}>Wat speelt er op dit moment?</h2>
-                  <p style={g.emptyP}>Je hoeft niet meteen te reageren. Neem de ruimte om te kijken wat je nodig hebt. Begin hieronder, of vertel in je eigen woorden wat er speelt.</p>
-                  <div className="quick-choices" style={g.quickBtns}>{quick.map((q, index) => <button className="quick-card" key={q.title} style={g.quickBtn} onClick={() => { setInput(q.draft); taRef.current?.focus(); }}>
-                    <span style={K.labelKlein}>0{index + 1}</span>
-                    <span style={{ ...K.serifKop("25px"), marginTop: "16px" }}>{q.title}</span>
-                    <p style={{ fontSize: "12px", color: K.kleur.tekstMeta, lineHeight: 1.7, margin: "12px 0 0" }}>{q.detail}</p>
-                  </button>)}</div>
-                </div>
-              )}
               {history.map((m, i) => renderMessage(m, i))}
               {loading && history[history.length - 1]?.role !== "assistant" && (
                 <div style={g.bubble("assistant")}>
@@ -393,8 +373,12 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
             </div>
           </div>
 
-          <div style={g.inputBarOuter}>
+          <div style={{ ...g.inputBarOuter, ...(history.length === 0 ? { borderTop: "none", overflowY: "auto", flex: 1, paddingTop: "28px" } : {}) }}>
             <div className="composer" style={g.inputBar}>
+              {history.length === 0 && <div className="welcome" style={g.emptyWrap}>
+                <h2 style={g.emptyH}>Welk bericht wil je bespreken?</h2>
+                <p style={g.emptyP}>Plak het bericht van je ex, voeg een screenshot toe of vertel wat er is gebeurd.</p>
+              </div>}
               {pendingImg && (
                 <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px", padding: "8px 12px", background: C.light, borderRadius: "6px" }}>
                   <img src={pendingImg.preview} alt="" style={{ maxWidth: "50px", maxHeight: "34px", borderRadius: "3px" }} />
@@ -408,7 +392,7 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
                 <button onClick={() => fileRef.current?.click()} disabled={uploadingImg} style={g.attachBtn(!!pendingImg)} title="Screenshot uploaden">
                   {uploadingImg ? "…" : "📎"}
                 </button>
-                <textarea aria-label="Jouw bericht" ref={taRef} style={g.chatTa} value={input}
+                <textarea aria-label="Jouw bericht" ref={taRef} style={{ ...g.chatTa, ...(history.length === 0 ? { minHeight: "110px" } : {}) }} value={input}
                   onChange={e => { setInput(e.target.value); if (taRef.current) { taRef.current.style.height = "auto"; taRef.current.style.height = Math.min(taRef.current.scrollHeight, 120) + "px"; } }}
                   onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
                   placeholder="Plak hier het bericht van je ex, of beschrijf de situatie..." rows={1} />
