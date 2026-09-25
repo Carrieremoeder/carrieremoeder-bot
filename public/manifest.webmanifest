@@ -1,0 +1,14 @@
+{
+  "name": "Always In Control Bot – Carrièremoeder",
+  "short_name": "Always In Control",
+  "description": "Jouw persoonlijke communicatiecoach van Carrièremoeder.",
+  "lang": "nl-NL",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FBF8F2",
+  "theme_color": "#FBF8F2",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
