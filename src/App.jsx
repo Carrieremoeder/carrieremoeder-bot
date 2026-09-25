@@ -1,3 +1,4 @@
+import { readCoachReply } from "../lib/coachStream.js";
 import { useState, useEffect, useRef } from "react";
 
 async function api(path, options = {}) {
@@ -206,6 +207,7 @@ export default function App() {
   function saveConversations(convs) { setConversations(convs); api("conversations", { method: "PUT", body: JSON.stringify({ conversations: convs }) }).catch(() => { alert("Gesprek opslaan is niet gelukt. Kopieer belangrijke tekst voordat je de pagina sluit."); }); }
 
   function newConversation() {
+    if (loading) return;
     const id = Date.now();
     const conv = { id, title: "Nieuw gesprek", date: new Date().toLocaleDateString("nl-NL"), messages: [] };
     const updated = [conv, ...conversations];
@@ -213,17 +215,18 @@ export default function App() {
   }
 
   function deleteConversation(id) {
+    if (loading) return;
     if (!window.confirm("Dit gesprek definitief uit de actieve database verwijderen?")) return;
     const updated = conversations.filter(c => c.id !== id);
     saveConversations(updated);
     if (activeId === id) { setActiveId(updated[0]?.id || null); setHistory(updated[0]?.messages || []); }
   }
 
-  function loadConversation(conv) { setActiveId(conv.id); setHistory(conv.messages || []); setPendingImg(null); }
+  function loadConversation(conv) { if (loading) return; setActiveId(conv.id); setHistory(conv.messages || []); setPendingImg(null); }
 
-  function updateCurrentConversation(msgs, id) {
+  function updateCurrentConversation(msgs, id, baseConversations = conversations) {
     const targetId = id || activeId;
-    const updated = conversations.map(c => {
+    const updated = baseConversations.map(c => {
       if (c.id !== targetId) return c;
       const firstUser = msgs.find(m => m.role === "user");
       const rawText = firstUser ? (typeof firstUser.content === "string" ? firstUser.content : firstUser.display?.text || "Gesprek") : "Gesprek";
@@ -279,14 +282,13 @@ export default function App() {
 
     try {
       const apiMessages = nh.slice(-30).map(({ role, content }) => ({ role, content }));
-      const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: apiMessages }) });
-      const d = await res.json();
-      if (!res.ok) throw new Error(d.error || "De coach is tijdelijk niet beschikbaar.");
-      const reply = d.content?.[0]?.text;
-      if (!reply) throw new Error("Er is geen antwoord ontvangen. Probeer opnieuw.");
+      const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: apiMessages, stream: true }) });
+      const reply = await readCoachReply(res, text => {
+        setHistory([...nh, { role: "assistant", content: text }]);
+      });
       const newHistory = [...nh, { role: "assistant", content: reply }];
       setHistory(newHistory);
-      updateCurrentConversation(newHistory, currentId);
+      updateCurrentConversation(newHistory, currentId, currentConvs);
     } catch (e) {
       setHistory(history);
       setInput(msg);
@@ -342,7 +344,7 @@ input:focus,textarea:focus{border-color:#B8735A!important;outline:none}
           <span style={g.sub}>Always In Control Bot</span>
         </div>
         <div style={{ display: "flex", gap: "8px" }}>
-          <button style={g.ghostBtn} onClick={logout}>Uitloggen</button>
+          <button style={g.ghostBtn} onClick={logout} disabled={loading}>Uitloggen</button>
         </div>
       </div>
 
@@ -370,7 +372,7 @@ input:focus,textarea:focus{border-color:#B8735A!important;outline:none}
                 </div>
               )}
               {history.map((m, i) => renderMessage(m, i))}
-              {loading && (
+              {loading && history[history.length - 1]?.role !== "assistant" && (
                 <div style={g.bubble("assistant")}>
                   <div style={g.bLbl}>Always In Control Bot</div>
                   <div style={g.bBody("assistant")}><span style={g.dot("0s")} /><span style={g.dot("0.2s")} /><span style={g.dot("0.4s")} /></div>

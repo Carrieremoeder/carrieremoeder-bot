@@ -1,3 +1,4 @@
+import { readEvents } from '../lib/coachStream.js';
 import { BOT_INSTRUCTIES } from '../lib/botInstructions.js';
 import { requireCode, sameOrigin } from '../lib/security.js';
 
@@ -23,10 +24,11 @@ export default async function handler(req, res) {
     let input;
     try { input = messages.map(toClaude); } catch { return res.status(400).json({ error: 'Ongeldige berichtinhoud of bestandstype.' }); }
     if (!process.env.ANTHROPIC_API_KEY) return res.status(503).json({ error: 'AI is nog niet ingesteld.' });
+    const streaming = req.body?.stream === true;
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST', headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
       signal: AbortSignal.timeout(45_000),
-      body: JSON.stringify({ model: process.env.BOT_CLAUDE_MODEL || 'claude-sonnet-4-6', system: BOT_INSTRUCTIES, messages: input, max_tokens: 2200 })
+      body: JSON.stringify({ model: process.env.BOT_CLAUDE_MODEL || 'claude-sonnet-4-6', system: BOT_INSTRUCTIES, messages: input, max_tokens: 2200, stream: streaming })
     });
     if (!response.ok) {
       // Log uitsluitend metadata; nooit promptinhoud, sleutel of upstream foutbericht.
@@ -38,6 +40,32 @@ export default async function handler(req, res) {
         code: String(upstream?.error?.code || 'unknown').slice(0, 80)
       });
       return res.status(502).json({ error: 'De coach is tijdelijk niet beschikbaar.' });
+    }
+    if (streaming) {
+      res.status(200);
+      res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-store, no-transform');
+      res.setHeader('X-Accel-Buffering', 'no');
+      res.flushHeaders?.();
+      const emit = event => res.write('data: ' + JSON.stringify(event) + '\n\n');
+      let text = '';
+      try {
+        for await (const event of readEvents(response.body)) {
+          if (event.type === 'error') throw new Error('Upstream stream error');
+          const delta = event.type === 'content_block_delta' && event.delta?.type === 'text_delta' ? event.delta.text
+            : event.type === 'content_block_start' && event.content_block?.type === 'text' ? event.content_block.text : '';
+          if (delta) { text += delta; emit({ type: 'text', text: delta }); }
+          if (event.type === 'message_stop') {
+            if (!text.trim()) throw new Error('Empty answer');
+            emit({ type: 'done' });
+            return res.end();
+          }
+        }
+        throw new Error('Incomplete stream');
+      } catch {
+        emit({ type: 'error' });
+        return res.end();
+      }
     }
     const data = await response.json();
     const text = (data.content || []).filter(item => item.type === 'text').map(item => item.text).join('\n');
