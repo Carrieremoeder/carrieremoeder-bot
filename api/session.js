@@ -9,6 +9,10 @@ export default async function handler(req, res) {
     if (req.method === 'DELETE') { if (!sameOrigin(req)) return res.status(403).end(); clearSession(res); return res.status(204).end(); }
     if (req.method !== 'POST') return res.status(405).end();
     if (!sameOrigin(req)) return res.status(403).end();
+    if (req.body?.action === 'renew') {
+      const code = await requireCode(req, res);
+      return code && res.status(200).json({ loggedIn: true, token: setSession(res, code) });
+    }
     const code = String(req.body?.code || '').trim().toUpperCase();
     if (!/^[A-Z0-9-]{4,80}$/.test(code)) return res.status(400).json({ error: 'Controleer je toegangscode.' });
     const record = await activeCode(code);
@@ -25,7 +29,7 @@ export default async function handler(req, res) {
       if (!verifyPassword(password, code, record.wachtwoord)) return res.status(401).json({ error: 'Onjuist wachtwoord.' });
       if (!record.wachtwoord.startsWith('scrypt:')) await db('codes', { method: 'PATCH', query: `?code=eq.${encodeURIComponent(code)}`, data: { wachtwoord: hashPassword(password) } });
     } else return res.status(400).end();
-    setSession(res, code);
-    return res.status(200).json({ loggedIn: true });
+    return res.status(200).json({ loggedIn: true, token: setSession(res, code) });
   } catch (error) { console.error('Bot session:', error.message); return res.status(500).json({ error: 'Inloggen lukt momenteel niet.' }); }
 }
+
