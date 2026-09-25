@@ -1,4 +1,6 @@
 import { readCoachReply } from "../lib/coachStream.js";
+import * as K from "./designTokens.js";
+import { brandLogo } from "./brandLogo.js";
 import { useState, useEffect, useRef } from "react";
 
 async function api(path, options = {}) {
@@ -20,83 +22,62 @@ function md(text) {
 }
 
 const C = {
-  bg: "#F7F5F2",
-  white: "#FFFFFF",
-  dark: "#1C1410",
-  terra: "#B8735A",
-  border: "#E8E2DC",
-  muted: "#9A8880",
-  light: "#F0EBE6",
-  sidebar: "#FAFAF8",
+  bg: K.kleur.pagina, white: K.kleur.kaart, dark: K.kleur.tekst,
+  terra: K.kleur.accentSteun, border: K.kleur.rand, muted: K.kleur.tekstMeta,
+  light: K.kleur.vlakAccent, sidebar: K.kleur.paginaZacht,
 };
-
 const g = {
-  page: { fontFamily: "'Inter', sans-serif", background: C.bg, minHeight: "100vh", color: C.dark, fontSize: "14px", overflowX: "hidden" },
-  hdr: {
-    borderBottom: `1px solid ${C.border}`,
-    padding: "0 24px",
-    height: "52px",
-    display: "flex", alignItems: "center", justifyContent: "space-between",
-    position: "sticky", top: 0, zIndex: 300, background: C.white,
-  },
-  hdrLeft: { display: "flex", alignItems: "center", gap: "6px" },
-  brandDot: { width: "6px", height: "6px", borderRadius: "50%", background: C.terra, flexShrink: 0 },
-  brand: { fontSize: "12px", fontFamily: "'Inter', sans-serif", fontWeight: "700", letterSpacing: "0.18em", textTransform: "uppercase", color: C.dark },
-  sub: { fontSize: "11px", fontFamily: "'Inter', sans-serif", color: C.muted, letterSpacing: "0.06em" },
-  hdrDivider: { width: "1px", height: "16px", background: C.border, margin: "0 10px" },
-  ghostBtn: { fontSize: "11px", fontFamily: "'Inter', sans-serif", fontWeight: "500", background: "none", border: `1px solid ${C.border}`, color: C.muted, cursor: "pointer", padding: "6px 14px", borderRadius: "4px", letterSpacing: "0.04em", transition: "all 0.15s" },
-  loginWrap: { maxWidth: "400px", margin: "80px auto", padding: "0 24px" },
-  loginH: { fontSize: "30px", fontWeight: "300", fontFamily: "'Cormorant Garamond', serif", marginBottom: "8px", color: C.dark, lineHeight: 1.2 },
-  loginP: { fontSize: "14px", color: "#6B5E58", marginBottom: "36px", lineHeight: 1.7 },
-  lbl: { display: "block", fontSize: "10px", fontWeight: "600", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "7px", color: C.muted },
-  inp: { width: "100%", padding: "11px 14px", fontSize: "14px", border: `1.5px solid ${C.border}`, borderRadius: "6px", fontFamily: "'Inter', sans-serif", outline: "none", boxSizing: "border-box", background: C.white, color: C.dark, transition: "border-color 0.15s" },
-  btnP: { padding: "12px 24px", background: C.dark, color: C.white, border: "none", fontSize: "11px", fontFamily: "'Inter', sans-serif", fontWeight: "600", letterSpacing: "0.12em", textTransform: "uppercase", cursor: "pointer", borderRadius: "4px", transition: "opacity 0.15s" },
-  btnG: { padding: "10px 18px", background: C.white, color: C.dark, border: `1.5px solid ${C.border}`, fontSize: "11px", fontFamily: "'Inter', sans-serif", fontWeight: "500", letterSpacing: "0.08em", textTransform: "uppercase", cursor: "pointer", borderRadius: "4px" },
-  err: { fontSize: "13px", color: C.terra, marginTop: "10px" },
+  page: { fontFamily: K.font.sans, background: C.bg, height: "100dvh", minHeight: "100dvh", color: C.dark, fontSize: "14px", display: "flex", flexDirection: "column", overflow: "hidden" },
+  hdr: { borderBottom: `1px solid ${K.kleur.randStructuur}`, padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px 12px", background: C.bg, flexShrink: 0, zIndex: 30 },
+  hdrLeft: { display: "flex", alignItems: "center", gap: "10px", minWidth: 0 },
+  brand: { ...K.label, letterSpacing: "0.22em", color: C.dark },
+  sub: { ...K.labelKlein, fontSize: "10.5px", fontWeight: "400", letterSpacing: "0.14em", textTransform: "none", whiteSpace: "nowrap" },
+  hdrDivider: { width: "1px", height: "26px", background: K.kleur.randStructuur, margin: "0 4px", flexShrink: 0 },
+  ghostBtn: { ...K.secundaireKnop, fontSize: "10px", padding: "9px 14px", minHeight: "36px" },
+  loginWrap: { width: "100%", maxWidth: "420px", margin: "72px auto", padding: "0 24px" },
+  loginH: { ...K.serifKop("36px"), margin: "0 0 10px" },
+  loginP: { fontSize: "14px", color: K.kleur.tekstZacht, marginBottom: "36px", lineHeight: 1.75 },
+  lbl: { ...K.label, display: "block", marginBottom: "8px" },
+  inp: { width: "100%", padding: "12px 14px", fontSize: "14px", border: `1px solid ${K.kleur.randVeld}`, borderRadius: 0, fontFamily: K.font.sans, background: C.white, color: C.dark },
+  btnP: K.actieKnop, btnG: K.secundaireKnop,
+  err: { fontSize: "13px", color: K.kleur.gevaar, marginTop: "10px", lineHeight: 1.6 },
   fldGrp: { marginBottom: "16px" },
-  layout: { display: "flex", height: "calc(100vh - 52px)", overflow: "hidden" },
-  sidebar: { width: "220px", minWidth: "220px", borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", background: C.sidebar, flexShrink: 0, overflowY: "auto" },
-  sideHeader: { padding: "16px 16px 8px", fontSize: "9px", fontWeight: "700", letterSpacing: "0.18em", textTransform: "uppercase", color: C.muted },
-  newBtn: { margin: "0 12px 12px", padding: "9px 14px", background: C.terra, color: C.white, border: "none", fontSize: "11px", fontFamily: "'Inter', sans-serif", fontWeight: "600", cursor: "pointer", borderRadius: "4px", letterSpacing: "0.06em", textAlign: "center" },
-  convItem: (active) => ({
-    padding: "10px 16px",
-    cursor: "pointer",
-    background: active ? C.light : "transparent",
-    borderLeft: active ? `2px solid ${C.terra}` : "2px solid transparent",
-    transition: "all 0.1s",
-  }),
-  convTitle: (active) => ({ fontSize: "12px", color: active ? C.dark : "#5A4840", lineHeight: 1.35, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: active ? "600" : "400" }),
-  convDate: { fontSize: "10px", color: C.muted, marginTop: "2px" },
-  mainArea: { flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" },
-  msgs: { flex: 1, overflowY: "auto", padding: "24px 32px", maxWidth: "720px", width: "100%", margin: "0 auto", boxSizing: "border-box" },
-  bubble: (r) => ({ marginBottom: "20px", display: "flex", flexDirection: "column", alignItems: r === "user" ? "flex-end" : "flex-start" }),
-  bLbl: { fontSize: "9px", fontWeight: "700", letterSpacing: "0.14em", textTransform: "uppercase", color: C.muted, marginBottom: "5px" },
-  bBody: (r) => ({
-    maxWidth: r === "assistant" ? "100%" : "75%",
-    padding: r === "user" ? "10px 15px" : "14px 18px",
-    background: r === "user" ? C.dark : C.white,
-    color: r === "user" ? C.white : C.dark,
-    fontSize: "14px",
-    lineHeight: 1.65,
-    borderRadius: r === "user" ? "12px 12px 2px 12px" : "2px 12px 12px 12px",
-    border: r === "assistant" ? `1px solid ${C.border}` : "none",
-    borderLeft: r === "assistant" ? `3px solid ${C.terra}` : "none",
-    wordBreak: "break-word",
-    boxShadow: r === "assistant" ? "0 1px 3px rgba(0,0,0,0.04)" : "none",
-  }),
-  inputBar: { borderTop: `1px solid ${C.border}`, padding: "12px 32px 14px", background: C.white, maxWidth: "720px", width: "100%", margin: "0 auto", boxSizing: "border-box" },
-  inputBarOuter: { borderTop: `1px solid ${C.border}`, background: C.white, display: "flex", justifyContent: "center" },
+  layout: { display: "flex", flex: "1 1 auto", minHeight: 0, position: "relative", overflow: "hidden" },
+  sidebar: { width: "240px", minWidth: "240px", borderRight: `1px solid ${K.kleur.randStructuur}`, display: "flex", flexDirection: "column", background: C.sidebar, overflowY: "auto", flexShrink: 0 },
+  sideHeader: { ...K.labelKlein, letterSpacing: "0.2em", padding: "20px 16px 8px" },
+  newBtn: { ...K.actieKnop, margin: "20px 16px 4px" },
+  convItem: active => ({ padding: "12px 16px", background: active ? C.light : "transparent", borderLeft: active ? `3px solid ${K.kleur.accent}` : "3px solid transparent" }),
+  convTitle: active => ({ display: "block", width: "100%", background: "none", border: 0, padding: 0, textAlign: "left", cursor: "pointer", fontFamily: K.font.sans, fontSize: "12px", color: active ? K.kleur.accentDiep : K.kleur.tekstZacht, lineHeight: 1.5, fontWeight: active ? "600" : "400", overflowWrap: "anywhere" }),
+  convDate: { fontSize: "10px", color: C.muted, marginTop: "6px", display: "flex", justifyContent: "space-between", alignItems: "center" },
+  mainArea: { flex: 1, minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" },
+  msgs: { padding: "32px", maxWidth: "860px", width: "100%", margin: "0 auto" },
+  bubble: role => ({ marginBottom: "24px", display: "flex", flexDirection: "column", alignItems: role === "user" ? "flex-end" : "flex-start" }),
+  bLbl: { ...K.labelKlein, marginBottom: "8px" },
+  bBody: role => ({ maxWidth: role === "assistant" ? "100%" : "85%", padding: "16px 20px", background: role === "user" ? K.kleur.accentVlakLicht : C.white, color: C.dark, fontSize: "14px", lineHeight: 1.8, border: `1px solid ${role === "user" ? K.kleur.accentRandZacht : C.border}`, borderLeft: role === "assistant" ? `2px solid ${K.kleur.accentSteun}` : undefined, overflowWrap: "anywhere" }),
+  inputBar: { padding: "18px 32px 16px", maxWidth: "860px", width: "100%", margin: "0 auto" },
+  inputBarOuter: { borderTop: `1px solid ${K.kleur.randStructuur}`, background: C.bg, flexShrink: 0 },
   inputRow: { display: "flex", gap: "8px", alignItems: "flex-end" },
-  chatTa: { flex: 1, padding: "11px 14px", fontSize: "14px", border: `1.5px solid ${C.border}`, borderRadius: "8px", fontFamily: "'Inter', sans-serif", resize: "none", outline: "none", lineHeight: 1.6, minHeight: "44px", maxHeight: "120px", boxSizing: "border-box", color: C.dark, background: C.white, transition: "border-color 0.15s" },
-  sendBtn: (dis) => ({ padding: "11px 16px", background: dis ? "#D8CCC6" : C.dark, color: C.white, border: "none", fontSize: "16px", cursor: dis ? "default" : "pointer", flexShrink: 0, borderRadius: "8px", transition: "background 0.15s" }),
-  attachBtn: (active) => ({ padding: "11px 12px", background: active ? C.dark : C.white, color: active ? C.white : C.muted, border: `1.5px solid ${active ? C.dark : C.border}`, fontSize: "16px", cursor: "pointer", flexShrink: 0, borderRadius: "8px", transition: "all 0.15s" }),
-  dot: (d) => ({ display: "inline-block", width: "5px", height: "5px", borderRadius: "50%", background: C.terra, margin: "0 2px", animation: "bounce 1.2s ease-in-out infinite", animationDelay: d }),
-  emptyWrap: { textAlign: "center", padding: "60px 24px", maxWidth: "520px", margin: "0 auto" },
-  emptyH: { fontSize: "26px", fontWeight: "300", fontFamily: "'Cormorant Garamond', serif", color: C.dark, marginBottom: "10px" },
-  emptyP: { fontSize: "14px", color: "#7A6860", lineHeight: 1.7, marginBottom: "28px" },
-  quickBtns: { display: "flex", flexWrap: "wrap", gap: "8px", justifyContent: "center" },
-  quickBtn: { fontSize: "12px", padding: "9px 16px", background: C.white, border: `1px solid ${C.border}`, color: "#5A4840", cursor: "pointer", borderRadius: "6px", transition: "all 0.15s" },
+  chatTa: { flex: 1, minWidth: 0, padding: "12px 14px", fontSize: "14px", border: `1px solid ${K.kleur.randVeld}`, borderRadius: 0, fontFamily: K.font.sans, resize: "none", lineHeight: 1.6, minHeight: "46px", maxHeight: "120px", color: C.dark, background: C.white },
+  sendBtn: disabled => ({ ...K.actieKnop, padding: "10px 16px", minHeight: "46px", fontSize: "18px", opacity: disabled ? 0.45 : 1 }),
+  attachBtn: active => ({ ...K.secundaireKnop, padding: "10px 12px", minHeight: "46px", fontSize: "18px", background: active ? C.light : "transparent" }),
+  dot: delay => ({ display: "inline-block", width: "5px", height: "5px", borderRadius: "50%", background: C.terra, margin: "0 2px", animation: "bounce 1.2s ease-in-out infinite", animationDelay: delay }),
+  emptyWrap: { padding: "44px 0 32px", maxWidth: "740px", margin: "0 auto" },
+  emptyH: { ...K.serifKop("44px"), margin: "12px 0 16px" },
+  emptyP: { fontSize: "14px", color: K.kleur.tekstZacht, lineHeight: 1.8, margin: "0 0 32px", maxWidth: "540px" },
+  quickBtns: { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "14px" },
+  quickBtn: { display: "flex", flexDirection: "column", alignItems: "flex-start", textAlign: "left", padding: "22px 18px", background: C.white, border: `1px solid ${C.border}`, color: C.dark, cursor: "pointer", fontFamily: K.font.sans, minHeight: "190px" },
 };
+function BrandHeader({ loggedIn = false, loading = false, sidebarOpen, onMenu, onLogout }) {
+  return <header style={g.hdr} className="hdr-bar">
+    <div style={g.hdrLeft} className="hdr-brand">
+      {loggedIn && <button type="button" style={K.icoonKnop} onClick={onMenu} aria-label="Gesprekkenmenu" aria-expanded={sidebarOpen} aria-controls="gesprekkenmenu">☰</button>}
+      <img src={brandLogo} alt="CARRIEREMOEDER" className="brand-logo" style={{ height: "36px", width: "auto", display: "block", flexShrink: 0 }} />
+      <span style={g.hdrDivider} className="hdr-divider" />
+      <span style={g.sub} className="hdr-sub">Always In Control Bot</span>
+    </div>
+    {loggedIn && <button style={g.ghostBtn} onClick={onLogout} disabled={loading}>Uitloggen</button>}
+  </header>;
+}
 
 function Login({ onLogin }) {
   const [code, setCode] = useState("");
@@ -134,10 +115,6 @@ function Login({ onLogin }) {
 
   return (
     <div style={g.loginWrap}>
-      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "28px" }}>
-        <div style={g.brandDot} />
-        <span style={{ ...g.brand, fontSize: "10px" }}>Carrièremoeder</span>
-      </div>
       <h1 style={g.loginH}>Always In Control Bot</h1>
       <p style={g.loginP}>Jouw persoonlijke communicatiecoach bij elk bericht van je ex.</p>
 
@@ -149,7 +126,7 @@ function Login({ onLogin }) {
       </>)}
 
       {stap === "wachtwoord-nieuw" && (<>
-        <div style={{ background: "#FDF5F2", border: `1px solid #F0E4DE`, padding: "12px 14px", marginBottom: "18px", fontSize: "13px", color: "#5A4840", lineHeight: 1.6, borderRadius: "6px" }}>
+        <div style={{ background: K.kleur.accentVlakLicht, border: `1px solid ${K.kleur.rand}`, padding: "12px 14px", marginBottom: "18px", fontSize: "13px", color: K.kleur.tekstZacht, lineHeight: 1.6, borderRadius: "6px" }}>
           Welkom! Kies een persoonlijk wachtwoord voor je account.
         </div>
         <div style={g.fldGrp}><label style={g.lbl}>Nieuw wachtwoord</label>
@@ -169,7 +146,7 @@ function Login({ onLogin }) {
         <button style={{ ...g.btnG, width: "100%", marginTop: "8px" }} onClick={() => setStap("code")}>← Terug</button>
       </>)}
 
-      <p style={{ fontSize: "12px", color: "#C8B8B0", marginTop: "28px", lineHeight: 1.7 }}>Toegangscode ontvangen na aankoop via www.carrieremoeder.com</p>
+      <p style={{ fontSize: "12px", color: C.muted, marginTop: "28px", lineHeight: 1.7 }}>Toegangscode ontvangen na aankoop via www.carrieremoeder.com</p>
     </div>
   );
 }
@@ -182,6 +159,7 @@ export default function App() {
   const [history, setHistory] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth > 720);
   const [chatError, setChatError] = useState("");
   const [pendingImg, setPendingImg] = useState(null);
   const [uploadingImg, setUploadingImg] = useState(false);
@@ -202,12 +180,21 @@ export default function App() {
     }).catch(() => {});
   }, [loggedIn]);
 
+  useEffect(() => {
+    function escapeMenu(e) { if (e.key === "Escape") setSidebarOpen(false); }
+    window.addEventListener("keydown", escapeMenu);
+    return () => window.removeEventListener("keydown", escapeMenu);
+  }, []);
+
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [history, loading]);
 
   function saveConversations(convs) { setConversations(convs); api("conversations", { method: "PUT", body: JSON.stringify({ conversations: convs }) }).catch(() => { alert("Gesprek opslaan is niet gelukt. Kopieer belangrijke tekst voordat je de pagina sluit."); }); }
 
+  function closeMobileMenu() { if (window.innerWidth <= 720) setSidebarOpen(false); }
+
   function newConversation() {
     if (loading) return;
+    closeMobileMenu();
     const id = Date.now();
     const conv = { id, title: "Nieuw gesprek", date: new Date().toLocaleDateString("nl-NL"), messages: [] };
     const updated = [conv, ...conversations];
@@ -222,7 +209,7 @@ export default function App() {
     if (activeId === id) { setActiveId(updated[0]?.id || null); setHistory(updated[0]?.messages || []); }
   }
 
-  function loadConversation(conv) { if (loading) return; setActiveId(conv.id); setHistory(conv.messages || []); setPendingImg(null); }
+  function loadConversation(conv) { if (loading) return; closeMobileMenu(); setActiveId(conv.id); setHistory(conv.messages || []); setPendingImg(null); }
 
   function updateCurrentConversation(msgs, id, baseConversations = conversations) {
     const targetId = id || activeId;
@@ -316,19 +303,43 @@ export default function App() {
     );
   }
 
-  const quick = ["Dit bericht kreeg ik van mijn ex — wat is wijs om te doen?", "Hij stuurde iets dat me boos maakt. Hoe blijf ik rustig?", "Ik twijfel of ik moet reageren of stil moet blijven.", "Kun je helpen dit bericht te ontleden en daarna weer te herstellen?"];
+  const quick = [
+    { title: "Een bericht bespreken", detail: "Kijk rustig naar wat er staat en wat het met je doet.", draft: "Ik wil dit bericht bespreken: " },
+    { title: "Een reactie schrijven", detail: "Vind woorden die duidelijk zijn en bij jouw grenzen passen.", draft: "Help me een rustige, duidelijke reactie te schrijven op: " },
+    { title: "Eerst even rustig worden", detail: "Neem een moment voor jezelf voordat je beslist wat je doet.", draft: "Ik merk dat een bericht me raakt. Help me eerst even rustig te worden." },
+  ];
 
-  const CSS = `@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Inter:wght@300;400;500;600;700&display=swap");
+
+  const CSS = `@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Inter:wght@400;500;600;700&display=swap");
+${K.TOKENS_CSS}
+*{box-sizing:border-box}body{margin:0;background:var(--vlak-pagina)}
+button,textarea,input{font:inherit}button:disabled{cursor:default;opacity:.5}
+button:not(:disabled):hover{background:var(--accent-vlak)}
+button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.quick-card{transition:border-color .18s,transform .18s}.quick-card:hover{border-color:var(--accent-rand)!important;transform:translateY(-2px)}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:var(--rand-structuur)}
 @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}
-*{box-sizing:border-box}
-button:hover{opacity:.85}
-input:focus,textarea:focus{border-color:#B8735A!important;outline:none}
-::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:#E0D8D4;border-radius:2px}`;
+.menu-backdrop{display:none}
+@media(max-width:720px){
+.hdr-bar{padding:12px 14px!important}.hdr-brand{flex-wrap:wrap;gap:8px!important}
+.hdr-sub{font-size:9px!important}.hdr-divider{display:none!important}
+.brand-logo{height:32px!important}.hdr-bar>button{padding:8px!important;font-size:9px!important}
+.chat-sidebar{position:absolute;inset:0 auto 0 0;z-index:20;width:min(280px,85vw)!important;min-width:0!important}
+.menu-backdrop{display:block;position:absolute;inset:0;background:rgba(28,20,16,.22);border:0;z-index:19}
+.chat-messages{padding:24px 18px!important}.welcome{padding:14px 0 20px!important}
+.welcome h2{font-size:36px!important}.quick-choices{grid-template-columns:1fr!important;gap:10px!important}
+.quick-card{min-height:0!important;padding:16px!important}.quick-card p{margin:8px 0 0!important}
+.composer{padding:14px 14px max(14px,env(safe-area-inset-bottom))!important}.composer textarea{font-size:16px!important}
+.composer-hints{flex-direction:column;gap:5px}.keyboard-hint{display:none}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+`;
 
-  if (checking) return <div style={g.page}>Toegang controleren…</div>;
+  if (checking) return <div style={g.page}><style>{CSS}</style><BrandHeader /><p role="status" style={{ padding: "24px", color: C.muted }}>Toegang controleren…</p></div>;
   if (!loggedIn) return (
-    <div style={{ ...g.page, background: C.white }}>
+    <div style={{ ...g.page, overflowY: "auto" }}>
       <style>{CSS}</style>
+      <BrandHeader />
       <Login onLogin={() => setLoggedIn(true)} />
     </div>
   );
@@ -336,39 +347,35 @@ input:focus,textarea:focus{border-color:#B8735A!important;outline:none}
   return (
     <div style={g.page}>
       <style>{CSS}</style>
-      <div style={g.hdr}>
-        <div style={g.hdrLeft}>
-          <div style={g.brandDot} />
-          <span style={g.brand}>Carrièremoeder</span>
-          <div style={g.hdrDivider} />
-          <span style={g.sub}>Always In Control Bot</span>
-        </div>
-        <div style={{ display: "flex", gap: "8px" }}>
-          <button style={g.ghostBtn} onClick={logout} disabled={loading}>Uitloggen</button>
-        </div>
-      </div>
+      <BrandHeader loggedIn loading={loading} sidebarOpen={sidebarOpen} onMenu={() => setSidebarOpen(open => !open)} onLogout={logout} />
 
       <div style={g.layout}>
-        <div style={g.sidebar}>
-          <button style={g.newBtn} onClick={newConversation}>+ Nieuw gesprek</button>
+        {sidebarOpen && <button className="menu-backdrop" aria-label="Gesprekkenmenu sluiten" onClick={() => setSidebarOpen(false)} />}
+        {sidebarOpen && <aside id="gesprekkenmenu" aria-label="Gesprekken" className="chat-sidebar" style={g.sidebar}>
+          <button style={g.newBtn} disabled={loading} onClick={newConversation}>+ Nieuw gesprek</button>
           <div style={g.sideHeader}>Gesprekken</div>
           {conversations.length === 0 && <div style={{ padding: "10px 16px", fontSize: "12px", color: C.muted }}>Nog geen gesprekken</div>}
           {conversations.map(conv => (
-            <div key={conv.id} style={g.convItem(conv.id === activeId)} onClick={() => loadConversation(conv)}>
-              <div style={g.convTitle(conv.id === activeId)}>{conv.title}</div>
-              <div style={g.convDate}>{conv.date} <button type="button" aria-label="Gesprek verwijderen" onClick={e => { e.stopPropagation(); deleteConversation(conv.id); }} style={{ border: "none", background: "transparent", color: C.muted, cursor: "pointer", float: "right" }}>Verwijder</button></div>
+            <div key={conv.id} style={g.convItem(conv.id === activeId)}>
+              <button disabled={loading} aria-current={conv.id === activeId ? "page" : undefined} style={g.convTitle(conv.id === activeId)} onClick={() => loadConversation(conv)}>{conv.title}</button>
+              <div style={g.convDate}>{conv.date} <button type="button" disabled={loading} aria-label="Gesprek verwijderen" onClick={e => { e.stopPropagation(); deleteConversation(conv.id); }} style={{ border: "none", background: "transparent", color: C.muted, cursor: "pointer", float: "right" }}>Verwijder</button></div>
             </div>
           ))}
-        </div>
+        </aside>}
 
-        <div style={g.mainArea}>
+        <main style={g.mainArea}>
           <div style={{ flex: 1, overflowY: "auto" }}>
-            <div style={g.msgs}>
+            <div className="chat-messages" style={g.msgs}>
               {history.length === 0 && (
-                <div style={g.emptyWrap}>
-                  <h2 style={g.emptyH}>Wat speelt er vandaag?</h2>
-                  <p style={g.emptyP}>Plak het bericht van je ex, upload een screenshot of beschrijf een situatie.</p>
-                  <div style={g.quickBtns}>{quick.map(q => <button key={q} style={g.quickBtn} onClick={() => setInput(q)}>{q}</button>)}</div>
+                <div className="welcome" style={g.emptyWrap}>
+                  <span style={K.labelKlein}>Jouw persoonlijke communicatiecoach</span>
+                  <h2 style={g.emptyH}>Wat speelt er op dit moment?</h2>
+                  <p style={g.emptyP}>Je hoeft niet meteen te reageren. Neem de ruimte om te kijken wat je nodig hebt. Begin hieronder, of vertel in je eigen woorden wat er speelt.</p>
+                  <div className="quick-choices" style={g.quickBtns}>{quick.map((q, index) => <button className="quick-card" key={q.title} style={g.quickBtn} onClick={() => { setInput(q.draft); taRef.current?.focus(); }}>
+                    <span style={K.labelKlein}>0{index + 1}</span>
+                    <span style={{ ...K.serifKop("25px"), marginTop: "16px" }}>{q.title}</span>
+                    <p style={{ fontSize: "12px", color: K.kleur.tekstMeta, lineHeight: 1.7, margin: "12px 0 0" }}>{q.detail}</p>
+                  </button>)}</div>
                 </div>
               )}
               {history.map((m, i) => renderMessage(m, i))}
@@ -383,11 +390,11 @@ input:focus,textarea:focus{border-color:#B8735A!important;outline:none}
           </div>
 
           <div style={g.inputBarOuter}>
-            <div style={g.inputBar}>
+            <div className="composer" style={g.inputBar}>
               {pendingImg && (
                 <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px", padding: "8px 12px", background: C.light, borderRadius: "6px" }}>
                   <img src={pendingImg.preview} alt="" style={{ maxWidth: "50px", maxHeight: "34px", borderRadius: "3px" }} />
-                  <span style={{ fontSize: "12px", color: "#5A4840", flex: 1 }}>{pendingImg.name}</span>
+                  <span style={{ fontSize: "12px", color: K.kleur.tekstZacht, flex: 1 }}>{pendingImg.name}</span>
                   <button onClick={() => setPendingImg(null)} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: "16px" }}>×</button>
                 </div>
               )}
@@ -397,19 +404,19 @@ input:focus,textarea:focus{border-color:#B8735A!important;outline:none}
                 <button onClick={() => fileRef.current?.click()} disabled={uploadingImg} style={g.attachBtn(!!pendingImg)} title="Screenshot uploaden">
                   {uploadingImg ? "…" : "📎"}
                 </button>
-                <textarea ref={taRef} style={g.chatTa} value={input}
+                <textarea aria-label="Jouw bericht" ref={taRef} style={g.chatTa} value={input}
                   onChange={e => { setInput(e.target.value); if (taRef.current) { taRef.current.style.height = "auto"; taRef.current.style.height = Math.min(taRef.current.scrollHeight, 120) + "px"; } }}
                   onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
                   placeholder="Plak hier het bericht van je ex, of beschrijf de situatie..." rows={1} />
-                <button style={g.sendBtn(loading || (!input.trim() && !pendingImg))} onClick={send} disabled={loading || (!input.trim() && !pendingImg)}>→</button>
+                <button aria-label="Bericht versturen" style={g.sendBtn(loading || (!input.trim() && !pendingImg))} onClick={send} disabled={loading || (!input.trim() && !pendingImg)}>→</button>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginTop: "6px" }}>
-                <span style={{ fontSize: "10px", color: "#C8B8B0" }}>Shift+Enter voor nieuwe regel · 📎 voor screenshot</span>
-                <span style={{ fontSize: "10px", color: "#C8B8B0" }}>Maak namen en andere herkenbare details onleesbaar vóór je iets deelt</span>
+              <div className="composer-hints" style={{ display: "flex", justifyContent: "space-between", gap: "18px", marginTop: "10px", lineHeight: 1.6 }}>
+                <span className="keyboard-hint" style={{ fontSize: "10px", color: C.muted }}>Shift+Enter voor nieuwe regel · 📎 voor screenshot</span>
+                <span style={{ fontSize: "10px", color: C.muted }}>Maak namen en andere herkenbare details onleesbaar vóór je iets deelt</span>
               </div>
             </div>
           </div>
-        </div>
+        </main>
       </div>
     </div>
   );
