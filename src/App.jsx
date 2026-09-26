@@ -3,6 +3,7 @@ import * as K from "./designTokens.js";
 import { brandLogo } from "./brandLogo.js";
 import { useState, useEffect, useRef } from "react";
 import { tabSession, WARNING_MS } from "./browserSession.js";
+import EmailLogin, { readAuthReturn } from "./EmailLogin.jsx";
 
 async function api(path, options = {}) {
   const token = tabSession.token();
@@ -82,79 +83,6 @@ function BrandHeader({ loggedIn = false, loading = false, sidebarOpen, onMenu, o
   </header>;
 }
 
-function Login({ onLogin, notice }) {
-  const [code, setCode] = useState("");
-  const [wachtwoord, setWachtwoord] = useState("");
-  const [nieuwWachtwoord, setNieuwWachtwoord] = useState("");
-  const [bevestig, setBevestig] = useState("");
-  const [stap, setStap] = useState("code");
-  const [err, setErr] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  async function checkCode() {
-    setLoading(true); setErr("");
-    try {
-      const data = await api("session", { method: "POST", body: JSON.stringify({ action: "check", code }) });
-      setStap(data.needsPassword ? "wachtwoord-in" : "wachtwoord-nieuw");
-    } catch (e) { setErr(e.message); }
-    setLoading(false);
-  }
-
-  async function maakWachtwoord() {
-    if (nieuwWachtwoord.length < 8) { setErr("Kies een wachtwoord van minimaal 8 tekens."); return; }
-    if (nieuwWachtwoord !== bevestig) { setErr("Wachtwoorden komen niet overeen."); return; }
-    setLoading(true); setErr("");
-    try { const data = await api("session", { method: "POST", body: JSON.stringify({ action: "register", code, password: nieuwWachtwoord }) }); tabSession.start(data.token); onLogin(); }
-    catch (e) { setErr(e.message); }
-    setLoading(false);
-  }
-
-  async function controleerWachtwoord() {
-    setLoading(true); setErr("");
-    try { const data = await api("session", { method: "POST", body: JSON.stringify({ action: "login", code, password: wachtwoord }) }); tabSession.start(data.token); onLogin(); }
-    catch (e) { setErr(e.message); }
-    setLoading(false);
-  }
-
-  return (
-    <div style={g.loginWrap}>
-      <h1 style={g.loginH}>Always In Control Bot</h1>
-      <p style={g.loginP}>Jouw persoonlijke communicatiecoach bij elk bericht van je ex.</p>
-      {notice && <p role="status" style={{ ...g.loginP, marginBottom: "20px" }}>{notice}</p>}
-
-      {stap === "code" && (<>
-        <div style={g.fldGrp}><label style={g.lbl}>Toegangscode</label>
-          <input style={g.inp} value={code} onChange={e => setCode(e.target.value)} onKeyDown={e => e.key === "Enter" && checkCode()} placeholder="Jouw toegangscode" autoFocus={window.matchMedia("(min-width: 721px) and (pointer: fine)").matches} /></div>
-        {err && <p style={g.err}>{err}</p>}
-        <button style={{ ...g.btnP, width: "100%", marginTop: "4px", opacity: loading ? 0.6 : 1 }} onClick={checkCode} disabled={loading}>{loading ? "Controleren..." : "Volgende →"}</button>
-      </>)}
-
-      {stap === "wachtwoord-nieuw" && (<>
-        <div style={{ background: K.kleur.accentVlakLicht, border: `1px solid ${K.kleur.rand}`, padding: "12px 14px", marginBottom: "18px", fontSize: "13px", color: K.kleur.tekstZacht, lineHeight: 1.6, borderRadius: "6px" }}>
-          Welkom! Kies een persoonlijk wachtwoord voor je account.
-        </div>
-        <div style={g.fldGrp}><label style={g.lbl}>Nieuw wachtwoord</label>
-          <input style={g.inp} type="password" value={nieuwWachtwoord} onChange={e => setNieuwWachtwoord(e.target.value)} placeholder="Minimaal 8 tekens" autoFocus={window.matchMedia("(min-width: 721px) and (pointer: fine)").matches} /></div>
-        <div style={g.fldGrp}><label style={g.lbl}>Bevestig wachtwoord</label>
-          <input style={g.inp} type="password" value={bevestig} onChange={e => setBevestig(e.target.value)} onKeyDown={e => e.key === "Enter" && maakWachtwoord()} placeholder="Herhaal wachtwoord" /></div>
-        {err && <p style={g.err}>{err}</p>}
-        <button style={{ ...g.btnP, width: "100%", marginTop: "4px", opacity: loading ? 0.6 : 1 }} onClick={maakWachtwoord} disabled={loading}>{loading ? "Opslaan..." : "Wachtwoord instellen →"}</button>
-        <button style={{ ...g.btnG, width: "100%", marginTop: "8px" }} onClick={() => setStap("code")}>← Terug</button>
-      </>)}
-
-      {stap === "wachtwoord-in" && (<>
-        <div style={g.fldGrp}><label style={g.lbl}>Wachtwoord</label>
-          <input style={g.inp} type="password" value={wachtwoord} onChange={e => setWachtwoord(e.target.value)} onKeyDown={e => e.key === "Enter" && controleerWachtwoord()} placeholder="Jouw wachtwoord" autoFocus={window.matchMedia("(min-width: 721px) and (pointer: fine)").matches} /></div>
-        {err && <p style={g.err}>{err}</p>}
-        <button style={{ ...g.btnP, width: "100%", marginTop: "4px", opacity: loading ? 0.6 : 1 }} onClick={controleerWachtwoord} disabled={loading}>{loading ? "Controleren..." : "Inloggen →"}</button>
-        <button style={{ ...g.btnG, width: "100%", marginTop: "8px" }} onClick={() => setStap("code")}>← Terug</button>
-      </>)}
-
-      <p style={{ fontSize: "12px", color: C.muted, marginTop: "28px", lineHeight: 1.7 }}>Toegangscode ontvangen na aankoop via www.carrieremoeder.com</p>
-    </div>
-  );
-}
-
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [checking, setChecking] = useState(true);
@@ -188,6 +116,7 @@ export default function App() {
     });
     let cancelled = false;
     const generation = sessionGeneration.current;
+    if (Object.keys(readAuthReturn(window.location)).length) tabSession.clear();
     if (tabSession.token()) {
       api("session").then(() => { if (!cancelled && generation === sessionGeneration.current && tabSession.token()) setLoggedIn(true); })
         .catch(() => tabSession.clear('expired')).finally(() => { if (!cancelled) setChecking(false); });
@@ -421,7 +350,7 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
     <div style={{ ...g.page, overflowY: "auto" }}>
       <style>{CSS}</style>
       <BrandHeader />
-      <Login notice={sessionNotice} onLogin={() => { setSessionNotice(""); setLoggedIn(true); }} />
+      <EmailLogin api={api} styles={g} notice={sessionNotice} onLogin={() => { setSessionNotice(""); setLoggedIn(true); }} />
     </div>
   );
 

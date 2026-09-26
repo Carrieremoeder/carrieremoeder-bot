@@ -1,4 +1,5 @@
 import { activeCode, clearSession, db, hashPassword, requireCode, sameOrigin, setSession, verifyPassword } from '../lib/security.js';
+import { AuthError, handleEmailAction } from '../lib/emailAuth.js';
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   try {
@@ -9,6 +10,7 @@ export default async function handler(req, res) {
     if (req.method === 'DELETE') { if (!sameOrigin(req)) return res.status(403).end(); clearSession(res); return res.status(204).end(); }
     if (req.method !== 'POST') return res.status(405).end();
     if (!sameOrigin(req)) return res.status(403).end();
+    if (String(req.body?.action || '').startsWith('email-')) return await handleEmailAction(req, res, setSession);
     if (req.body?.action === 'renew') {
       const code = await requireCode(req, res);
       return code && res.status(200).json({ loggedIn: true, token: setSession(res, code) });
@@ -17,6 +19,7 @@ export default async function handler(req, res) {
     if (!/^[A-Z0-9-]{4,80}$/.test(code)) return res.status(400).json({ error: 'Controleer je toegangscode.' });
     const record = await activeCode(code);
     if (!record) return res.status(401).json({ error: 'Toegangscode niet herkend.' });
+    if (record.auth_user_id) return res.status(401).json({ error: 'Dit account gebruikt nu je e-mailadres. Log daarmee in.' });
     if (req.body?.action === 'check') return res.status(200).json({ needsPassword: !!record.wachtwoord });
     const password = String(req.body?.password || '');
     if (password.length < 8 || password.length > 128) return res.status(400).json({ error: 'Gebruik een wachtwoord van minimaal 8 tekens.' });
@@ -30,6 +33,10 @@ export default async function handler(req, res) {
       if (!record.wachtwoord.startsWith('scrypt:')) await db('codes', { method: 'PATCH', query: `?code=eq.${encodeURIComponent(code)}`, data: { wachtwoord: hashPassword(password) } });
     } else return res.status(400).end();
     return res.status(200).json({ loggedIn: true, token: setSession(res, code) });
-  } catch (error) { console.error('Bot session:', error.message); return res.status(500).json({ error: 'Inloggen lukt momenteel niet.' }); }
+  } catch (error) {
+    if (error instanceof AuthError) return res.status(error.status).json({ error: error.message });
+    console.error('Bot session:', error.message);
+    return res.status(500).json({ error: 'Inloggen lukt momenteel niet.' });
+  }
 }
 
