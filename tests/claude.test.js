@@ -8,8 +8,7 @@ test('Claude coach contract and authentication', async t => {
   process.env.ANTHROPIC_API_KEY = 'test-only';
   process.env.SUPABASE_URL = 'https://database.invalid';
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-only';
-  let cookie;
-  setSession({ setHeader: (name, value) => { cookie = value.split(';')[0]; } }, 'TEST-CODE');
+  const token = setSession({ setHeader() {} }, 'TEST-CODE');
   const originalFetch = globalThis.fetch;
   t.after(() => { globalThis.fetch = originalFetch; });
   let calls, upstream;
@@ -22,7 +21,7 @@ test('Claude coach contract and authentication', async t => {
       return new Response(typeof upstream === 'string' ? upstream : JSON.stringify(upstream || { content: [{ type: 'text', text: 'Ik help je.' }] }), { status: options.status || 200 });
     };
     const res = { chunks: [], setHeader() {}, write(chunk) { this.chunks.push(chunk); }, status(n) { this.code = n; return this; }, json(data) { this.data = data; return this; }, end() { this.ended = true; } };
-    await handler({ method: 'POST', headers: { host: 'bot.example', origin: options.origin || 'https://bot.example', cookie: options.anonymous ? '' : cookie }, body: { messages, stream: options.stream } }, res);
+    await handler({ method: 'POST', headers: { host: 'bot.example', origin: options.origin || 'https://bot.example', authorization: options.anonymous ? '' : `Bearer ${token}` }, body: { messages, stream: options.stream } }, res);
     return res;
   }
   await t.test('text, history and images reach Claude with server instructions', async () => {
