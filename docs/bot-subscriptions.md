@@ -30,3 +30,15 @@ Implemented: versioned contract policy, Dutch calendar-date handling, anchored b
 
 This text is a draft, not a substitute for completed terms/withdrawal implementation.
 
+## Purchase intake added (still disabled)
+
+`api/systeme-sale.js` is preview-only and requires `BOT_PURCHASE_INTAKE_ENABLED=true`, a separately provisioned `SYSTEME_WEBHOOK_SECRET`, and exact `SYSTEME_BOT_FUNNEL_ID`, `SYSTEME_BOT_STEP_ID`, `SYSTEME_BOT_PRICE_PLAN_ID`. Only the first two IDs are currently verified (7643956, 25595872). Never use fixture plan ID 123 or infer plan identity from the displayed price/name.
+
+The endpoint checks Systeme normalized HMAC, stores minimal immutable purchase evidence through `bot_record_purchase`, and does not change access. The draft `supabase/purchase-inbox.sql` is for an isolated staging database, not the existing customer database. SQL has not been executed or integration-tested. Delivery event headers are unsigned and are routing hints only.
+
+`firstPaidPeriod` compares an authenticated sale with a payment fetched from Mollie, checks exact order-item identity, test mode, first-payment status, amount, reversals and payment date. It returns a candidate only; no first-purchase access transaction or reconciliation worker is wired yet. Missing reversal fields deliberately require review until actual provider responses are verified. No subscription is created by this code.
+
+Next dependencies: isolated staging Supabase credentials; actual immutable price-plan ID; signed Systeme webhook configuration; supported Systeme-to-Mollie test-purchase route. Mollie test API works independently, but this does not establish that Systeme checkout can use test mode. Verify that separately before suggesting a free end-to-end purchase. Production launch additionally needs provider subscription mapping, acceptance evidence, atomic access provisioning, renewals/reversals, cancellation worker and UI.
+
+References: https://developer.systeme.io/docs/webhooks and https://developer.systeme.io/docs/webhooks-events-new-sale
+
