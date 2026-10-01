@@ -42,3 +42,21 @@ Next dependencies: isolated staging Supabase credentials; actual immutable price
 
 References: https://developer.systeme.io/docs/webhooks and https://developer.systeme.io/docs/webhooks-events-new-sale
 
+## Isolated purchase storage (1 October 2026)
+
+The purchase intake now requires `BOT_STAGING_SUPABASE_PROJECT_REF` and
+`BOT_STAGING_SUPABASE_SERVICE_ROLE_KEY`, scoped to the subscription Preview branch.
+It no longer uses `SUPABASE_URL` or `SUPABASE_SERVICE_ROLE_KEY` for writes.
+The staging project must be separate from both the bot and shared account projects.
+Both known production project references, reuse of the production key, and a target
+matching `SUPABASE_URL` or `BOT_AUTH_URL` are rejected before a network request.
+Requests are limited to the purchase-inbox RPC, refuse redirects, and time out after
+10 seconds. The webhook still grants no access and starts no collection.
+
+Verified in the Supabase dashboard on 1 October: the organization has two projects
+and creating another free project is blocked by the two-project limit. Neither
+existing project was paused or modified. A separate hosted staging database has
+not been provisioned; database integration and an actual test purchase remain unverified.
+Local automated tests use simulated database responses, not a real Supabase instance.
+
+

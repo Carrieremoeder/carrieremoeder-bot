@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { db } from '../lib/security.js';
+import { recordTestPurchase } from '../lib/purchaseStore.js';
 import { saleIdentity, systemePayload, verifySystemeSignature } from '../lib/purchaseVerification.js';
 
 // Staging intake only. Persist minimal order evidence; never grant access here.
@@ -21,11 +21,11 @@ export default async function handler(req, res) {
       pricePlanId: process.env.SYSTEME_BOT_PRICE_PLAN_ID,
     });
     if (!sale) return res.status(204).end();
-    const result = await db('rpc/bot_record_purchase', {method:'POST',data:{
+    const result = await recordTestPurchase({
       p_order_item_id: sale.orderItemId, p_customer_id: sale.customerId,
       p_email: sale.email, p_price_plan_id: sale.pricePlanId,
       p_payload_hash: createHash('sha256').update(systemePayload(body)).digest('hex'),
-    }});
+    });
     if (result !== true) throw new Error('Purchase not persisted');
     return res.status(202).json({received:true});
   } catch {
@@ -33,4 +33,5 @@ export default async function handler(req, res) {
     return res.status(503).json({error:'Purchase could not be recorded'});
   }
 }
+
 
