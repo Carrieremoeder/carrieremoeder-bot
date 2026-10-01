@@ -23,9 +23,13 @@ Writes use a transaction, parameters, bounded waits and sanitized errors.
 
 1. Account owner enables password login for `bot_payment_test_runner` and sets a
    unique password. All its other role flags stay off; do not grant it other roles.
-2. Account owner stores the URI as sensitive `BOT_TEST_DATABASE_URL` in Vercel
-   Preview, branch `codex/bot-year-subscription`. Use the SAME new test-role password,
-   percent-encoded; never use or reset the postgres administrator password.
+2. Preferred: the account owner enters only the new test-role password as sensitive
+   `BOT_TEST_DATABASE_PASSWORD` in Vercel Preview, branch `codex/bot-year-subscription`.
+   The adapter constructs the verified pooler URI and encodes special characters.
+   Do not use or reset the postgres administrator password.
+
+   Alternatively use sensitive `BOT_TEST_DATABASE_URL` with the following URI.
+   Configure exactly one of these secrets, never both:
 
    `postgresql://bot_payment_test_runner.ejtfgvlaygrcthjihwoa:PERCENT_ENCODED_TEST_PASSWORD@aws-1-eu-west-1.pooler.supabase.com:6543/postgres`
 

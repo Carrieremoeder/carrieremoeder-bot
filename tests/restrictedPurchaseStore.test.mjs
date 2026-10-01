@@ -15,6 +15,10 @@ test('restricted connection accepts only verified Supabase targets, test identit
   assert.equal(config.ssl.rejectUnauthorized,true);
   assert.equal(config.user,'bot_payment_test_runner');
   assert.equal(config.connectionTimeoutMillis,5000);
+  const passwordOnly = testDatabaseConfig({VERCEL_ENV:'preview',BOT_TEST_DATABASE_PASSWORD:'fixture:@ /?#%'});
+  assert.equal(passwordOnly.password,'fixture:@ /?#%');
+  assert.equal(passwordOnly.host,'aws-1-eu-west-1.pooler.supabase.com');
+  assert.throws(()=>testDatabaseConfig({...env,BOT_TEST_DATABASE_PASSWORD:'ambiguous'}));
   const pool = 'postgresql://bot_payment_test_runner.ejtfgvlaygrcthjihwoa:fixture@aws-1-eu-west-1.pooler.supabase.com:6543/postgres';
   assert.equal(testDatabaseConfig({...env,BOT_TEST_DATABASE_URL:pool}).port,6543);
   for (const url of [
