@@ -59,4 +59,13 @@ existing project was paused or modified. A separate hosted staging database has
 not been provisioned; database integration and an actual test purchase remain unverified.
 Local automated tests use simulated database responses, not a real Supabase instance.
 
+### Later update: third project no longer required for database tests
+
+An isolated test schema was installed in the existing bot project on 1 October.
+The real Supabase smoke test passed with a NOLOGIN role and all fixture rows rolled
+back. Local PGlite tests now additionally execute real PostgreSQL SQL and check
+permissions. See `docs/testing-with-two-projects.md` for the verified scope and
+remaining connection work. The webhook is still disabled and not connected to
+this schema; the earlier staging-project guard remains in place.
+
 
