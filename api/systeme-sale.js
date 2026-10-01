@@ -3,7 +3,8 @@ import { recordTestPurchase } from '../lib/purchaseStore.js';
 import { saleIdentity, systemePayload, verifySystemeSignature } from '../lib/purchaseVerification.js';
 
 // Staging intake only. Persist minimal order evidence; never grant access here.
-export default async function handler(req, res) {
+export function createPurchaseHandler({ store = recordTestPurchase } = {}) {
+return async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (process.env.BOT_PURCHASE_INTAKE_ENABLED !== 'true' || process.env.VERCEL_ENV !== 'preview') return res.status(503).json({error:'Not enabled'});
   if (req.method !== 'POST') return res.status(405).end();
@@ -21,7 +22,7 @@ export default async function handler(req, res) {
       pricePlanId: process.env.SYSTEME_BOT_PRICE_PLAN_ID,
     });
     if (!sale) return res.status(204).end();
-    const result = await recordTestPurchase({
+    const result = await store({
       p_order_item_id: sale.orderItemId, p_customer_id: sale.customerId,
       p_email: sale.email, p_price_plan_id: sale.pricePlanId,
       p_payload_hash: createHash('sha256').update(systemePayload(body)).digest('hex'),
@@ -33,5 +34,8 @@ export default async function handler(req, res) {
     return res.status(503).json({error:'Purchase could not be recorded'});
   }
 }
+}
+
+export default createPurchaseHandler();
 
 

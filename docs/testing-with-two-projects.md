@@ -38,11 +38,12 @@ verify grants/RLS, exercise the hosted verification script, and prove the entire
 migration rolls back when inherited privileges make isolation unsafe. PGlite is
 not a hosted Supabase replacement and does not exercise concurrent connections.
 
-The automated webhook is NOT connected to this zone yet. `purchaseStore.js` still
-refuses production projects. The next implementation step is an adapter using a
-restricted server-side connection or a reviewed, narrowly scoped gateway. Do not
-enable LOGIN or reuse the production service key as a shortcut. Actual Mollie and
-Systeme.io checkout tests, concurrent delivery, and access provisioning remain open.
+The restricted PostgreSQL adapter is now implemented and tested locally through
+the signed webhook handler. Hosted connection activation is pending the owner's
+test-role password and Preview configuration. The separate-project adapter still
+refuses production projects and never falls back to a privileged key. See
+`docs/restricted-connection.md`. Actual Mollie and Systeme.io checkout tests,
+concurrent delivery, and access provisioning remain open.
 
 ## Design constraints for connecting a hosted runner
 
