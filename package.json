@@ -6,7 +6,7 @@
   "scripts": {
     "test": "node --test tests/*.test.mjs tests/*.test.js",
     "dev": "node scripts/generate-icons.mjs && vite",
-    "build": "node scripts/generate-icons.mjs && vite build",
+    "build": "node scripts/check-test-database.mjs && node scripts/generate-icons.mjs && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
