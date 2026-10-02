@@ -45,7 +45,7 @@ export default function EmailLogin({ api, onLogin, notice, styles: g }) {
       const data = await api('session', { method: 'POST', body: JSON.stringify({ action, email: email.trim().toLowerCase(), password,
         ...(step === 'reset' || step === 'confirm' ? { recoveryToken: authReturn.recoveryToken, tokenHash: authReturn.tokenHash } : {}) }) });
       setPassword(''); setConfirm('');
-      if (data.token) { tabSession.start(data.token); onLogin(); return; }
+      if (data.token) { tabSession.start(data.token); onLogin(data); return; }
       if (step === 'reset' || step === 'confirm') {
         authReturn.recoveryToken = undefined; authReturn.tokenHash = undefined;
         setStep('login'); setMessage(step === 'reset' ? 'Je wachtwoord is gewijzigd. Log in met je nieuwe wachtwoord.' : 'Je e-mailadres is bevestigd. Je kunt nu inloggen.');
@@ -94,4 +94,5 @@ export default function EmailLogin({ api, onLogin, notice, styles: g }) {
     <p style={{ fontSize: '12px', color: K.kleur.tekstMeta, marginTop: '22px', lineHeight: 1.7 }}>Heb je Always In Control Bot gekocht? Gebruik dan hetzelfde e-mailadres waarmee je je abonnement hebt afgesloten.</p>
   </div>;
 }
+
 

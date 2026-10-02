@@ -1,19 +1,22 @@
-import { activeCode, clearSession, db, hashPassword, requireCode, sameOrigin, setSession, verifyPassword } from '../lib/security.js';
+import { activeCode, clearSession, db, hashPassword, sameOrigin, setSession, verifyPassword } from '../lib/security.js';
 import { AuthError, handleEmailAction } from '../lib/emailAuth.js';
+import { sessionAccess } from '../lib/subscriptionAccess.js';
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   try {
     if (req.method === 'GET') {
-      const code = await requireCode(req, res);
-      return code && res.status(200).json({ loggedIn: true });
+      const access = await sessionAccess(req);
+      if (!access) return res.status(401).json({ error: 'Log opnieuw in.' });
+      return res.status(200).json({ loggedIn: true, chatAccess: access.chatAccess });
     }
     if (req.method === 'DELETE') { if (!sameOrigin(req)) return res.status(403).end(); clearSession(res); return res.status(204).end(); }
     if (req.method !== 'POST') return res.status(405).end();
     if (!sameOrigin(req)) return res.status(403).end();
     if (String(req.body?.action || '').startsWith('email-')) return await handleEmailAction(req, res, setSession);
     if (req.body?.action === 'renew') {
-      const code = await requireCode(req, res);
-      return code && res.status(200).json({ loggedIn: true, token: setSession(res, code) });
+      const access = await sessionAccess(req);
+      if (!access) return res.status(401).json({ error: 'Log opnieuw in.' });
+      return res.status(200).json({ loggedIn: true, chatAccess: access.chatAccess, token: setSession(res, access.code, access.chatAccess ? 'chat' : 'management') });
     }
     const code = String(req.body?.code || '').trim().toUpperCase();
     if (!/^[A-Z0-9-]{4,80}$/.test(code)) return res.status(400).json({ error: 'Controleer je toegangscode.' });
@@ -39,4 +42,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Inloggen lukt momenteel niet.' });
   }
 }
+
 

@@ -13,8 +13,15 @@ end and paid-access date. Cancellation requires an explicit second action, block
 duplicate submissions, preserves errors for retry and displays the server's
 persisted cancellation/end dates. It does not claim collection has stopped.
 The interface remains unavailable while the server feature gate is disabled.
-Recovery login for expired accounts and provider reconciliation remain blockers;
-this UI change does not activate billing or establish a verified live lifecycle.
+Verified email login now supports management-only sessions for an already bound
+account with exactly one open contract, behind the same server feature gate.
+These credentials are rejected by chat/conversation authorization and remain
+management-only across reload and renewal, even if paid access later returns.
+The management screen does not load conversations and offers retry on status
+failure. No expired account is automatically bound by email; first-time binding
+for those accounts still needs a verified ownership/provisioning workflow.
+Provider reconciliation and hosted lifecycle verification remain blockers.
+This UI change does not activate billing.
 
 ## Verified configuration
 
@@ -30,7 +37,7 @@ this UI change does not activate billing or establish a verified live lifecycle.
 2. Build and test Mollie payment reconciliation, refunds/chargebacks and out-of-order deliveries; fetch current provider state server-side. No new subscriptions may be created by the bot: Systeme.io owns collection.
 3. Persist cancellation immediately, then schedule collection termination for the recorded end date. The worker must process pending requests, retry failures and confirm provider state before reporting that collection has stopped. It must not cancel the provider subscription immediately when notice is given during the initial year.
 4. Handle final partial billing/refunds when one-month notice ends between invoice dates. Never extend the contract to the next invoice date to avoid a partial period.
-5. Provide subscription-management login to expired/non-paying accounts without granting paid chat access. Current app login denies expired bot access, so this is a launch blocker.
+5. Verify management-only login for expired/non-paying accounts in the hosted lifecycle. It is implemented for existing verified identity bindings; accounts without a binding still need an ownership/provisioning workflow.
 6. Add user-facing status/cancel UI, terms acceptance evidence, withdrawal route, purchase/confirmation emails and a complete test-mode lifecycle.
 7. Apply SQL only after verifying the existing codes primary key/type; configure server-side provider credentials without putting them in source, browser storage or chat. Enable only after provider and database integration tests pass.
 

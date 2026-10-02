@@ -18,7 +18,7 @@ export default async function handler(req, res) {
   if (!['GET', 'POST'].includes(req.method)) return res.status(405).end();
   if (req.method === 'POST' && !sameOrigin(req)) return res.status(403).end();
   try {
-    const code = currentCode(req);
+    const code = currentCode(req, { allowManagement: true });
     if (!code) return res.status(401).json({ error: 'Log opnieuw in.' });
     // Do not require paid chat access in order to view/cancel a contract.
     // Only the server-issued identity is used, never a code from the body.
@@ -50,4 +50,5 @@ export default async function handler(req, res) {
     return res.status(503).json({ error: 'Opslaan of ophalen is niet gelukt. Probeer het opnieuw of neem contact op met Carrièremoeder.' });
   }
 }
+
 

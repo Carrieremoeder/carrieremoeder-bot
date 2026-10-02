@@ -86,6 +86,7 @@ function BrandHeader({ loggedIn = false, loading = false, sidebarOpen, onMenu, o
 
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(false);
+  const [chatAccess, setChatAccess] = useState(false);
   const [checking, setChecking] = useState(true);
   const [conversations, setConversations] = useState([]);
   const [activeId, setActiveId] = useState(null);
@@ -111,7 +112,7 @@ export default function App() {
       sessionGeneration.current += 1;
       chatController.current?.abort();
       imageReader.current?.abort();
-      setLoggedIn(false); setHistory([]); setConversations([]); setActiveId(null);
+      setLoggedIn(false); setChatAccess(false); setHistory([]); setConversations([]); setActiveId(null);
       setInput(""); setPendingImg(null); setChatError(""); setLoading(false); setUploadingImg(false); setIdleSeconds(null);
       setSessionNotice(reason === 'idle' ? 'Je bent automatisch uitgelogd na 30 minuten zonder activiteit. Log opnieuw in om verder te gaan.' : reason === 'expired' ? 'Je sessie is verlopen. Log opnieuw in om verder te gaan.' : '');
     });
@@ -119,7 +120,7 @@ export default function App() {
     const generation = sessionGeneration.current;
     if (Object.keys(readAuthReturn(window.location)).length) tabSession.clear();
     if (tabSession.token()) {
-      api("session").then(() => { if (!cancelled && generation === sessionGeneration.current && tabSession.token()) setLoggedIn(true); })
+      api("session").then(data => { if (!cancelled && generation === sessionGeneration.current && tabSession.token()) { setChatAccess(data.chatAccess !== false); setLoggedIn(true); } })
         .catch(() => tabSession.clear('expired')).finally(() => { if (!cancelled) setChecking(false); });
     } else setChecking(false);
     return () => { cancelled = true; unsubscribe(); };
@@ -140,7 +141,7 @@ export default function App() {
         renewing = true; lastAttempt = Date.now();
         try {
           const data = await api('session', { method: 'POST', body: JSON.stringify({ action: 'renew' }) });
-          if (!cancelled && generation === sessionGeneration.current && tabSession.token()) { tabSession.replace(data.token); renewedActivity = activity; }
+          if (!cancelled && generation === sessionGeneration.current && tabSession.token()) { tabSession.replace(data.token); setChatAccess(data.chatAccess !== false); renewedActivity = activity; }
         } catch { /* Network failures retry while the local idle deadline still applies. */ }
         finally { renewing = false; }
       }
@@ -162,7 +163,7 @@ export default function App() {
     };
   }, [loggedIn]);
   useEffect(() => {
-    if (!loggedIn) return;
+    if (!loggedIn || !chatAccess) return;
     let cancelled = false;
     const generation = sessionGeneration.current;
     api("conversations").then(data => {
@@ -173,7 +174,7 @@ export default function App() {
       }
     }).catch(() => {});
     return () => { cancelled = true; };
-  }, [loggedIn]);
+  }, [loggedIn, chatAccess]);
 
   useEffect(() => {
     const query = window.matchMedia("(max-width: 720px)");
@@ -351,9 +352,21 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
     <div style={{ ...g.page, overflowY: "auto" }}>
       <style>{CSS}</style>
       <BrandHeader />
-      <EmailLogin api={api} styles={g} notice={sessionNotice} onLogin={() => { setSessionNotice(""); setLoggedIn(true); }} />
+      <EmailLogin api={api} styles={g} notice={sessionNotice} onLogin={data => { setSessionNotice(""); setChatAccess(data.chatAccess !== false); setLoggedIn(true); }} />
     </div>
   );
+
+  if (!chatAccess) return <div style={{ ...g.page, overflowY: 'auto' }}>
+    <style>{CSS}</style>
+    <BrandHeader />
+    <main style={{ padding: '24px', maxWidth: '720px', width: '100%', margin: '0 auto' }}>
+      <h1 style={K.serifKop('32px')}>Je abonnement beheren</h1>
+      <p>Je betaalde chattoegang is niet actief. Je kunt hier wel je abonnement bekijken en een opzegging doorgeven.</p>
+      {idleSeconds !== null && <p role="alert">Je wordt over {idleSeconds} seconden uitgelogd zonder activiteit.</p>}
+      <Subscription api={api} required />
+      <button style={{ ...g.ghostBtn, marginTop: '20px' }} onClick={logout}>Uitloggen</button>
+    </main>
+  </div>;
 
   return (
     <div style={g.page}>

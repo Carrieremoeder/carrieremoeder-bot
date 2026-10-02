@@ -5,9 +5,10 @@ const date = value => value ? new Intl.DateTimeFormat('nl-NL', { dateStyle: 'lon
 
 // The server feature gate stays authoritative. Disabled or absent contracts do
 // not add a non-working management entry to existing customers' accounts.
-export default function Subscription({ api }) {
+export default function Subscription({ api, required = false }) {
   const [subscription, setSubscription] = useState(null);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(required);
+  const [attempt, setAttempt] = useState(0);
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -16,9 +17,10 @@ export default function Subscription({ api }) {
   useEffect(() => {
     mounted.current = true;
     let cancelled = false;
-    api('subscription').then(data => { if (!cancelled) setSubscription(data); }).catch(() => {});
+    setError('');
+    api('subscription').then(data => { if (!cancelled) setSubscription(data); }).catch(err => { if (!cancelled) setError(err.message || 'Ophalen is niet gelukt.'); });
     return () => { cancelled = true; mounted.current = false; };
-  }, [api]);
+  }, [api, attempt]);
 
   async function cancel() {
     if (pending.current) return;
@@ -35,7 +37,9 @@ export default function Subscription({ api }) {
     }
   }
 
-  if (!subscription) return null;
+  if (!subscription) return required ? <div>
+    {error ? <><p role="alert">{error}</p><button style={K.secundaireKnop} onClick={() => setAttempt(value => value + 1)}>Opnieuw proberen</button></> : <p role="status">Abonnement ophalen…</p>}
+  </div> : null;
   return <section aria-label="Mijn abonnement" style={{ borderBottom: `1px solid ${K.kleur.randStructuur}`, padding: '12px 20px', maxHeight: '55dvh', overflowY: 'auto', flexShrink: 0 }}>
     <button type="button" style={K.secundaireKnop} aria-expanded={open} aria-controls="subscription-details" onClick={() => setOpen(value => !value)}>Mijn abonnement</button>
     {open && <div id="subscription-details" style={{ maxWidth: '640px', lineHeight: 1.7 }}>
