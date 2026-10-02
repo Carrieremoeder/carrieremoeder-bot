@@ -4,7 +4,17 @@ Offer: EUR 13 including tax per month, initial 12 months (EUR 156), then continu
 
 Implemented: versioned contract policy, Dutch calendar-date handling, anchored billing periods, a service-role-only contract table, authenticated status/cancellation endpoint and conditional cancellation persistence. Duplicate cancellation must preserve the original date. Paid access and contract obligation are separate; a 12-month commitment does not grant unpaid access.
 
-`BOT_SUBSCRIPTIONS_ENABLED` must remain unset. No live migration has been run. No existing entitlement has been changed. The new endpoint is deliberately unavailable by default. It is not wired into the UI yet.
+`BOT_SUBSCRIPTIONS_ENABLED` must remain unset. No live migration has been run. No existing entitlement has been changed. The endpoint is deliberately unavailable by default. The account UI now loads it and shows management only after a successful response; disabled or absent contracts remain hidden.
+
+## Customer UI, 2 October 2026
+
+Added a collapsible Mijn abonnement section with price, start date, minimum-term
+end and paid-access date. Cancellation requires an explicit second action, blocks
+duplicate submissions, preserves errors for retry and displays the server's
+persisted cancellation/end dates. It does not claim collection has stopped.
+The interface remains unavailable while the server feature gate is disabled.
+Recovery login for expired accounts and provider reconciliation remain blockers;
+this UI change does not activate billing or establish a verified live lifecycle.
 
 ## Verified configuration
 

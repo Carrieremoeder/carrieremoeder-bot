@@ -4,6 +4,7 @@ import { brandLogo } from "./brandLogo.js";
 import { useState, useEffect, useRef } from "react";
 import { tabSession, WARNING_MS } from "./browserSession.js";
 import EmailLogin, { readAuthReturn } from "./EmailLogin.jsx";
+import Subscription from "./Subscription.jsx";
 
 async function api(path, options = {}) {
   const token = tabSession.token();
@@ -358,6 +359,7 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
     <div style={g.page}>
       <style>{CSS}</style>
       <BrandHeader loggedIn sidebarOpen={sidebarOpen} onMenu={() => setSidebarOpen(open => !open)} onLogout={logout} />
+      <Subscription api={api} />
       {idleSeconds !== null && <div role="alert" style={{ padding: "12px 18px", background: C.light, borderBottom: `1px solid ${C.border}`, display: "flex", flexWrap: "wrap", alignItems: "center", gap: "10px" }}>
         <span>Je wordt over {idleSeconds} seconden automatisch uitgelogd. Niet-verstuurde tekst wordt gewist.</span>
         <button style={g.ghostBtn} onClick={() => { if (tabSession.touch()) setIdleSeconds(null); }}>Ingelogd blijven</button>
@@ -428,4 +430,5 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
     </div>
   );
 }
+
 
