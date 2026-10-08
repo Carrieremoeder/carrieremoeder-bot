@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {textMessages,contextFor,restore,persist,KEY} from '../privacy.js';
+test('rejects screenshots and non-text restored content',()=>{assert.throws(()=>textMessages([{role:'user',content:[{type:'image'}]}]));assert.throws(()=>restore({getItem:()=>JSON.stringify([{role:'user',content:{image:'x'}}])}));});
+test('disabling persistence removes stored content',()=>{const data=new Map();const storage={getItem:k=>data.get(k),setItem:(k,v)=>data.set(k,v),removeItem:k=>data.delete(k)};persist(storage,[{role:'user',content:'voorbeeld'}],true);assert.equal(restore(storage)[0].content,'voorbeeld');persist(storage,[],false);assert.equal(data.has(KEY),false);});
+test('bounded context starts with user and does not truncate a message',()=>{assert.deepEqual(contextFor([{role:'user',content:'oud'},{role:'assistant',content:'antwoord'},{role:'user',content:'nieuw'}],12),[{role:'user',content:'nieuw'}]);});
