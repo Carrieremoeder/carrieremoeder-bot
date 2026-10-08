@@ -19,6 +19,7 @@ export function restore(storage) {
 export function persist(storage,messages,enabled) {
   if(!enabled){storage.removeItem(KEY);return;}
   const data=JSON.stringify(textMessages(messages));
-  if(data.length>200000)throw new Error('Opslag is vol. Wis het gesprek of zet bewaren uit.');
+  if(messages.length>100 || data.length>200000)throw new Error('Opslag is vol. Wis het gesprek of zet bewaren uit.');
   storage.setItem(KEY,data);
 }
+
