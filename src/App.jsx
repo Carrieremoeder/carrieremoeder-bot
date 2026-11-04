@@ -61,10 +61,10 @@ const g = {
   bBody: role => ({ minWidth: 0, maxWidth: role === "assistant" ? "100%" : "85%", padding: "12px 16px", background: role === "user" ? K.kleur.accentVlakLicht : C.white, color: C.dark, fontSize: "14px", lineHeight: 1.55, border: `1px solid ${role === "user" ? K.kleur.accentRandZacht : C.border}`, borderLeft: role === "assistant" ? `2px solid ${K.kleur.accentSteun}` : undefined, overflowWrap: "anywhere" }),
   inputBar: { padding: "18px 32px 16px", maxWidth: "860px", width: "100%", margin: "0 auto" },
   inputBarOuter: { minWidth: 0, maxWidth: "100%", borderTop: `1px solid ${K.kleur.randStructuur}`, background: C.bg, flexShrink: 0 },
-  inputRow: { display: "flex", gap: "8px", alignItems: "flex-end" },
-  chatTa: { flex: 1, minWidth: 0, padding: "12px 14px", fontSize: "14px", border: `1px solid ${K.kleur.randVeld}`, borderRadius: 0, fontFamily: K.font.sans, resize: "none", lineHeight: 1.6, minHeight: "46px", maxHeight: "120px", color: C.dark, background: C.white },
-  sendBtn: disabled => ({ ...K.actieKnop, padding: "10px 16px", minHeight: "46px", fontSize: "18px", opacity: disabled ? 0.45 : 1 }),
-  attachBtn: active => ({ ...K.secundaireKnop, padding: "10px 12px", minHeight: "46px", fontSize: "18px", background: active ? C.light : "transparent" }),
+  inputRow: { display: "flex", gap: "8px", alignItems: "center", justifyContent: "space-between", marginTop: "8px" },
+  chatTa: { display: "block", width: "100%", minWidth: 0, padding: "12px 14px", fontSize: "14px", border: `1px solid ${K.kleur.randVeld}`, borderRadius: 0, fontFamily: K.font.sans, resize: "none", lineHeight: 1.6, minHeight: "46px", maxHeight: "120px", color: C.dark, background: C.white },
+  sendBtn: disabled => ({ ...K.actieKnop, padding: "10px 18px", minHeight: "44px", fontSize: "13px", opacity: disabled ? 0.45 : 1 }),
+  attachBtn: active => ({ ...K.secundaireKnop, padding: "10px 14px", minHeight: "44px", fontSize: "13px", background: active ? C.light : "transparent" }),
   dot: delay => ({ display: "inline-block", width: "5px", height: "5px", borderRadius: "50%", background: C.terra, margin: "0 2px", animation: "bounce 1.2s ease-in-out infinite", animationDelay: delay }),
   emptyWrap: { padding: "0 0 20px", maxWidth: "740px", margin: "0 auto" },
   emptyH: { ...K.serifKop("40px"), margin: "0 0 12px" },
@@ -87,10 +87,10 @@ function BrandHeader({ loggedIn = false, loading = false, sidebarOpen, onMenu, o
 }
 
 const QUICK_CHOICES = [
-  { title: "Ik heb een bericht van mijn ex ontvangen", detail: "Plak het bericht of voeg een screenshot toe. We kijken rustig naar wat er staat.", draft: "Ik heb dit bericht van mijn ex ontvangen: " },
-  { title: "Ik wil zelf een bericht aan mijn ex sturen", detail: "Vind woorden die duidelijk zijn en bij jouw grenzen passen.", draft: "Ik wil zelf een bericht aan mijn ex sturen. Dit wil ik duidelijk maken: " },
-  { title: "Ik wil een gesprek voorbereiden", detail: "Bereid een gesprek met je ex voor, zodat je rustig en met regie het gesprek ingaat.", draft: "Ik wil een gesprek met mijn ex voorbereiden. Het gesprek gaat over: " },
-  { title: "Ik wil eerst even tot rust komen", detail: "Neem een moment voor jezelf voordat je beslist wat je doet.", draft: "Ik merk dat contact met mijn ex me raakt. Help me eerst even tot rust te komen." }
+  { tint: "#FBF7F0", title: "Ik heb een bericht van mijn ex ontvangen", detail: "Plak het bericht of voeg een screenshot toe. We kijken rustig naar wat er staat.", draft: "Ik heb dit bericht van mijn ex ontvangen: " },
+  { tint: "#F4EEE5", title: "Ik wil zelf een bericht aan mijn ex sturen", detail: "Vind woorden die duidelijk zijn en bij jouw grenzen passen.", draft: "Ik wil zelf een bericht aan mijn ex sturen. Dit wil ik duidelijk maken: " },
+  { tint: "#EEF0E9", title: "Ik wil een gesprek voorbereiden", detail: "Bereid een gesprek met je ex voor, zodat je rustig en met regie het gesprek ingaat.", draft: "Ik wil een gesprek met mijn ex voorbereiden. Het gesprek gaat over: " },
+  { tint: "#F1ECEB", title: "Ik wil eerst even tot rust komen", detail: "Neem een moment voor jezelf voordat je beslist wat je doet.", draft: "Ik merk dat contact met mijn ex me raakt. Help me eerst even tot rust te komen." }
 ];
 
 export default function App() {
@@ -323,7 +323,7 @@ ${K.TOKENS_CSS}
 *{box-sizing:border-box}html,body,#root{width:100%;min-width:0;margin:0}html{-webkit-text-size-adjust:100%;text-size-adjust:100%}body{background:var(--vlak-pagina)}
 .hdr-brand{max-width:100%}.brand-logo{max-width:100%;object-fit:contain}.coach-answer{min-width:0;max-width:100%;overflow-wrap:anywhere}
 button,textarea,input{font:inherit}button:disabled{cursor:default;opacity:.5}
-button:not(:disabled):hover{background:var(--accent-vlak)}
+button:not(:disabled):not(.quick-card):hover{background:var(--accent-vlak)}
 .quick-card{transition:border-color .18s}.quick-card:hover{border-color:var(--accent-rand)!important}
 button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:var(--rand-structuur)}
@@ -399,7 +399,7 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
                 <h2 style={g.emptyH}>Wat houdt je nu bezig?</h2>
                 <p style={g.emptyP}>Kies waar je mee aan de slag wilt, of typ direct je situatie in het tekstvak.</p>
                 <div className="quick-choices" style={g.quickBtns}>{QUICK_CHOICES.map(q => (
-                  <button type="button" className="quick-card" key={q.title} style={g.quickBtn} onClick={() => { setInput(q.draft); setTimeout(() => { const t = taRef.current; if (t) { t.focus(); t.setSelectionRange(q.draft.length, q.draft.length); t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 120) + "px"; } }, 0); }}>
+                  <button type="button" className="quick-card" key={q.title} style={{ ...g.quickBtn, background: q.tint }} onClick={() => { setInput(q.draft); setTimeout(() => { const t = taRef.current; if (t) { t.focus(); t.setSelectionRange(q.draft.length, q.draft.length); t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 120) + "px"; } }, 0); }}>
                     <span style={g.quickTitle}>{q.title}</span>
                     <span style={g.quickDetail}>{q.detail}</span>
                   </button>
@@ -415,18 +415,18 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
               )}
               <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleImageUpload(e.target.files[0])} />
               {chatError && <p role="alert" style={g.err}>{chatError} Je bericht staat nog klaar om opnieuw te versturen.</p>}
+              <textarea aria-label="Jouw bericht" ref={taRef} style={{ ...g.chatTa, ...(history.length === 0 ? { minHeight: "110px" } : {}) }} value={input}
+                onChange={e => { setInput(e.target.value); if (taRef.current) { taRef.current.style.height = "auto"; taRef.current.style.height = Math.min(taRef.current.scrollHeight, 120) + "px"; } }}
+                onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
+                placeholder="Plak hier het bericht van je ex, of beschrijf de situatie..." rows={1} />
               <div style={g.inputRow}>
-                <button onClick={() => fileRef.current?.click()} disabled={uploadingImg} style={g.attachBtn(!!pendingImg)} title="Screenshot uploaden">
-                  {uploadingImg ? "…" : "📎"}
+                <button type="button" onClick={() => fileRef.current?.click()} disabled={uploadingImg} style={g.attachBtn(!!pendingImg)} title="Screenshot toevoegen">
+                  {uploadingImg ? "…" : "📎 Screenshot toevoegen"}
                 </button>
-                <textarea aria-label="Jouw bericht" ref={taRef} style={{ ...g.chatTa, ...(history.length === 0 ? { minHeight: "110px" } : {}) }} value={input}
-                  onChange={e => { setInput(e.target.value); if (taRef.current) { taRef.current.style.height = "auto"; taRef.current.style.height = Math.min(taRef.current.scrollHeight, 120) + "px"; } }}
-                  onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-                  placeholder="Plak hier het bericht van je ex, of beschrijf de situatie..." rows={1} />
-                <button aria-label="Bericht versturen" style={g.sendBtn(loading || (!input.trim() && !pendingImg))} onClick={send} disabled={loading || (!input.trim() && !pendingImg)}>→</button>
+                <button aria-label="Bericht versturen" style={g.sendBtn(loading || (!input.trim() && !pendingImg))} onClick={send} disabled={loading || (!input.trim() && !pendingImg)}>Versturen →</button>
               </div>
               <div className="composer-hints" style={{ display: "flex", justifyContent: "space-between", gap: "18px", marginTop: "10px", lineHeight: 1.6 }}>
-                <span className="keyboard-hint" style={{ fontSize: "10px", color: C.muted }}>Shift+Enter voor nieuwe regel · 📎 voor screenshot</span>
+                <span className="keyboard-hint" style={{ fontSize: "10px", color: C.muted }}>Shift+Enter voor een nieuwe regel</span>
                 <span style={{ fontSize: "10px", color: C.muted }}>Maak namen en andere herkenbare details onleesbaar vóór je iets deelt</span>
               </div>
             </div>
