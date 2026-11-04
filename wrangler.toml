@@ -2,3 +2,8 @@ name = "carrieremoeder-bot"
 pages_build_output_dir = "dist"
 compatibility_date = "2026-10-01"
 compatibility_flags = ["nodejs_compat"]
+
+# Niet-geheime instellingen. Geheime sleutels (OPENAI_API_KEY, SUPABASE_SERVICE_ROLE_KEY,
+# BOT_SESSION_SECRET) staan als "Secret" in het Cloudflare-dashboard.
+[vars]
+SUPABASE_URL = "https://ejtfgvlaygrcthjihwoa.supabase.co"
