@@ -91,7 +91,7 @@ test('login via Systeme.io: link only for tagged contacts, no passwords, session
       const c = contacts[u.searchParams.get('email')];
       return Response.json({ items: c ? [c] : [] });
     }
-    if (u.pathname === '/api/tags' && (init.method || 'GET') === 'GET') return Response.json({ items: tagExists ? [{ id: 55, name: 'bot-inloglink' }] : [] });
+    if (u.pathname === '/api/tags' && (init.method || 'GET') === 'GET') return Response.json({ items: tagExists ? [{ id: 54, name: 'iets anders' }, { id: 55, name: 'bot-inloglink' }] : [{ id: 54, name: 'iets anders' }], hasMore: false });
     if (u.pathname === '/api/tags' && init.method === 'POST') { tagExists = true; return Response.json({ id: 55, name: 'bot-inloglink' }); }
     if (u.pathname === '/api/contact_fields' && (init.method || 'GET') === 'GET') return Response.json({ items: fieldExists ? [{ slug: 'bot_inloglink' }] : [] });
     if (u.pathname === '/api/contact_fields' && init.method === 'POST') { fieldExists = true; return Response.json({ slug: 'bot_inloglink' }); }
