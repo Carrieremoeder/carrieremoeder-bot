@@ -1,4 +1,4 @@
-import { clearSession, createLoginToken, issuedAtOfLink, readLoginToken, requireCode, sameOrigin, setSession } from '../lib/security.js';
+import { clearSession, createLoginToken, currentSession, issuedAtOfLink, readLoginToken, sameOrigin, setSession } from '../lib/security.js';
 import { currentLoginField, ensureLoginField, ensureLoginTag, findContact, getContact, hasAccess, normaliseEmail, sendLoginLink } from '../lib/systeme.js';
 
 const RESEND_COOLDOWN_MS = 60 * 1000;
@@ -10,12 +10,26 @@ function publicUrl(req) {
   return 'https://' + req.headers.host;
 }
 
+// Wie lang ingelogd blijft, wordt bij elk bezoek opnieuw gecontroleerd in Systeme.io:
+// is de toegangstag weg (bijvoorbeeld na een terugbetaling), dan vervalt de toegang direct.
+async function activeSession(req) {
+  const session = currentSession(req);
+  if (!session) return null;
+  if (!session.remember) return session;
+  const id = /^SIO-(\d{1,20})$/.exec(session.code)?.[1];
+  if (!id) return null;
+  let contact = null;
+  try { contact = await getContact(id); } catch (error) { if (error.status !== 404) throw error; }
+  return hasAccess(contact) ? session : null;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   try {
     if (req.method === 'GET') {
-      const code = await requireCode(req, res);
-      return code && res.status(200).json({ loggedIn: true });
+      const session = await activeSession(req);
+      if (!session) return res.status(401).json({ error: 'Log opnieuw in.' });
+      return res.status(200).json({ loggedIn: true });
     }
     if (req.method === 'DELETE') { if (!sameOrigin(req)) return res.status(403).end(); clearSession(res); return res.status(204).end(); }
     if (req.method !== 'POST') return res.status(405).end();
@@ -23,8 +37,9 @@ export default async function handler(req, res) {
     const action = req.body?.action;
 
     if (action === 'renew') {
-      const code = await requireCode(req, res);
-      return code && res.status(200).json({ loggedIn: true, token: setSession(res, code) });
+      const session = await activeSession(req);
+      if (!session) return res.status(401).json({ error: 'Log opnieuw in.' });
+      return res.status(200).json({ loggedIn: true, token: setSession(res, session.code, session.remember) });
     }
 
     // Stap 1: inloglink aanvragen. Altijd hetzelfde antwoord, zodat niemand kan uitzoeken wie klant is.
@@ -37,7 +52,7 @@ export default async function handler(req, res) {
       const contact = await findContact(email);
       if (contact && hasAccess(contact)) {
         const recentlySent = Date.now() - issuedAtOfLink(currentLoginField(contact)) < RESEND_COOLDOWN_MS;
-        if (!recentlySent) await sendLoginLink(contact, `${publicUrl(req)}/?login=${createLoginToken(contact.id)}`);
+        if (!recentlySent) await sendLoginLink(contact, `${publicUrl(req)}/?login=${createLoginToken(contact.id, Date.now(), req.body?.remember === true)}`);
       }
       return res.status(200).json({ sent: true, message: SENT_MESSAGE });
     }
@@ -49,7 +64,7 @@ export default async function handler(req, res) {
       let contact = null;
       try { contact = await getContact(login.contactId); } catch (error) { if (error.status !== 404) throw error; }
       if (!hasAccess(contact)) return res.status(403).json({ error: 'We vinden geen actieve toegang tot de Bot bij dit account.' });
-      return res.status(200).json({ loggedIn: true, token: setSession(res, 'SIO-' + login.contactId) });
+      return res.status(200).json({ loggedIn: true, token: setSession(res, 'SIO-' + login.contactId, login.remember), remember: login.remember });
     }
 
     return res.status(400).json({ error: 'Ongeldige aanvraag.' });

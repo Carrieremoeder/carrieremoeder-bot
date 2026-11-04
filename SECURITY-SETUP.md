@@ -16,7 +16,7 @@
 
 1. De klant vult zijn e-mailadres in.
 2. De Bot zoekt het contact op in Systeme.io en controleert of het een toegangstag heeft (`BOT_ACCESS_TAGS`, standaard `Always In Control BOT` en `Always In Control Bot + Training`).
-3. Zo ja: de Bot zet een ondertekende inloglink (15 minuten geldig) in het contactveld `bot_inloglink` en zet de tag `bot-inloglink` opnieuw op het contact.
+3. Zo ja: de Bot zet een ondertekende inloglink (24 uur geldig; bevat ook de keuze "blijf ingelogd") in het contactveld `bot_inloglink` en zet de tag `bot-inloglink` opnieuw op het contact.
 4. Een automatisering in Systeme.io (trigger: tag `bot-inloglink` toegevoegd) mailt de link.
 5. De klant klikt op de link; de Bot controleert de tag opnieuw en start een sessie van 30 minuten.
 
@@ -36,6 +36,6 @@ Nieuwe toegangstag (bijvoorbeeld voor het abonnement): voeg de naam toe aan `BOT
 
 ## Testen na uitrol
 
-Inloglink aanvragen met een klant-e-mailadres (mail komt binnen, link werkt), met een e-mailadres zonder tag (geen mail), verlopen link (na 15 minuten), uitloggen, gesprek voeren, downloaden en weer inladen, mobiel.
+Inloglink aanvragen met een klant-e-mailadres (mail komt binnen, link werkt), met een e-mailadres zonder tag (geen mail), verlopen link (na 24 uur), "blijf ingelogd" (30 dagen, vervalt direct als de toegangstag weg is), uitloggen, gesprek voeren, downloaden en weer inladen, mobiel.
 
 Lokale tests: `node --test tests/*.test.js tests/*.test.mjs`.

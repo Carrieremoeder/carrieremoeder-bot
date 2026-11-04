@@ -153,3 +153,34 @@ test('login via Systeme.io: link only for tagged contacts, no passwords, session
   // Oude manieren van inloggen bestaan niet meer.
   assert.equal((await call({ action: 'login', code: 'TEST-1234', password: 'geheim123' })).code, 400);
 });
+
+test('blijf ingelogd: 30 dagen geldig, gewone sessie blijft 30 minuten, inloglink 24 uur', async () => {
+  const { setSession: set, currentSession, createLoginToken, readLoginToken } = await import('../lib/security.js');
+  const res = { setHeader() {} };
+  const long = set(res, 'SIO-5', true);
+  assert.deepEqual(currentSession({ headers: { authorization: `Bearer ${long}` } }), { code: 'SIO-5', remember: true });
+  const short = set(res, 'SIO-5');
+  assert.deepEqual(currentSession({ headers: { authorization: `Bearer ${short}` } }), { code: 'SIO-5', remember: false });
+  const now = Date.now();
+  const link = createLoginToken(7, now, true);
+  assert.equal(readLoginToken(link, now + 23 * 3600 * 1000).remember, true);
+  assert.equal(readLoginToken(link, now + 25 * 3600 * 1000), null);
+  assert.equal(readLoginToken(createLoginToken(7, now), now).remember, false);
+});
+
+test('onthouden sessie in de browser overleeft een nieuw tabblad, gewone niet', async () => {
+  const { createTabSession } = await import('../src/browserSession.js');
+  const mem = () => { const m = new Map(); return { getItem: k => m.get(k) ?? null, setItem: (k, v) => m.set(k, v), removeItem: k => m.delete(k) }; };
+  const local = mem();
+  const a = createTabSession({ storage: mem(), persistentStorage: local, navigationType: 'navigate' });
+  a.start('tok', true);
+  const b = createTabSession({ storage: mem(), persistentStorage: local, navigationType: 'navigate' });
+  assert.equal(b.token(), 'tok');
+  b.clear();
+  const c = createTabSession({ storage: mem(), persistentStorage: local, navigationType: 'navigate' });
+  assert.equal(c.token(), '');
+  const d = createTabSession({ storage: mem(), persistentStorage: local, navigationType: 'navigate' });
+  d.start('kort');
+  const e = createTabSession({ storage: mem(), persistentStorage: local, navigationType: 'navigate' });
+  assert.equal(e.token(), '');
+});
