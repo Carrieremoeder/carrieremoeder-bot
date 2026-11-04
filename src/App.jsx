@@ -74,7 +74,7 @@ function BrandHeader({ loggedIn = false, loading = false, sidebarOpen, onMenu, o
   return <header style={g.hdr} className="hdr-bar">
     <div style={g.hdrLeft} className="hdr-brand">
       {loggedIn && <button type="button" style={K.icoonKnop} onClick={onMenu} aria-label="Gesprekkenmenu" aria-expanded={sidebarOpen} aria-controls="gesprekkenmenu">☰</button>}
-      <img src="/meester-masha-logo.png" alt="Meester Masha" className="brand-logo" style={{ height: "40px", width: "auto", display: "block", flexShrink: 0 }} />
+      <img src="/meester-masha-logo.png" alt="Meester Masha" className="brand-logo" style={{ height: "52px", width: "auto", display: "block", flexShrink: 0 }} />
       <span style={g.hdrDivider} className="hdr-divider" />
       <span style={g.sub} className="hdr-sub">Always In Control Bot</span>
     </div>
@@ -321,7 +321,7 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
 @media(max-width:720px){
 .hdr-bar{padding:12px max(14px,env(safe-area-inset-right)) 12px max(14px,env(safe-area-inset-left))!important}.hdr-brand{flex:1 1 180px;flex-wrap:wrap;gap:8px!important}
 .hdr-sub{font-size:9px!important;white-space:normal!important;overflow-wrap:anywhere}.hdr-divider{display:none!important}
-.brand-logo{height:32px!important}.hdr-bar>button{padding:8px!important;font-size:9px!important}
+.brand-logo{height:44px!important}.hdr-bar>button{padding:8px!important;font-size:9px!important}
 .chat-sidebar{position:absolute;inset:0 auto 0 0;z-index:20;width:min(280px,85vw)!important;min-width:0!important}
 .menu-backdrop{display:block;position:absolute;inset:0;background:rgba(28,20,16,.22);border:0;z-index:19}
 .chat-messages{padding:24px 18px!important}.welcome{padding:0 0 18px!important}
