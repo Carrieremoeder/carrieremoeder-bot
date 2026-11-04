@@ -15,7 +15,7 @@
 ## Inloggen via Systeme.io (zonder wachtwoorden)
 
 1. De klant vult zijn e-mailadres in.
-2. De Bot zoekt het contact op in Systeme.io en controleert of het een toegangstag heeft (`BOT_ACCESS_TAGS`, standaard `bot` en `training + bot`).
+2. De Bot zoekt het contact op in Systeme.io en controleert of het een toegangstag heeft (`BOT_ACCESS_TAGS`, standaard `Always In Control BOT` en `Always In Control Bot + Training`).
 3. Zo ja: de Bot zet een ondertekende inloglink (15 minuten geldig) in het contactveld `bot_inloglink` en zet de tag `bot-inloglink` opnieuw op het contact.
 4. Een automatisering in Systeme.io (trigger: tag `bot-inloglink` toegevoegd) mailt de link.
 5. De klant klikt op de link; de Bot controleert de tag opnieuw en start een sessie van 30 minuten.

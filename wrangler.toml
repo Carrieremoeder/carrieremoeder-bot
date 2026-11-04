@@ -14,7 +14,7 @@ BOT_REASONING_EFFORT = "low"
 
 # Inloggen via Systeme.io (geen wachtwoorden, geen eigen klantenlijst).
 # Tags die toegang geven (komma-gescheiden, hoofdletters maken niet uit).
-BOT_ACCESS_TAGS = "bot,training + bot"
+BOT_ACCESS_TAGS = "Always In Control BOT,Always In Control Bot + Training"
 # Tag die de inlogmail-automatisering in Systeme.io start, en het veld met de inloglink.
 BOT_LOGIN_TAG = "bot-inloglink"
 BOT_LOGIN_FIELD = "bot_inloglink"
