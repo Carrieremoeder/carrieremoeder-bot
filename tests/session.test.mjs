@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
 import { createTabSession, IDLE_MS, WARNING_MS, SESSION_KEY } from '../src/browserSession.js';
 import { currentCode, setSession } from '../lib/security.js';
-import { hashPassword } from '../lib/security.js';
 import sessionHandler from '../api/session.js';
 
 function fixture() {
@@ -73,31 +72,78 @@ test('server requires signed per-tab authentication and rejects the old shared c
   ]) assert.equal(currentCode({ headers: { authorization: `Bearer ${signed(payload)}` } }), null);
 });
 
-test('login, session validation and activity renewal require valid credentials and an active account', async () => {
+test('login via Systeme.io: link only for tagged contacts, no passwords, sessions without database', async t => {
   process.env.BOT_SESSION_SECRET = 'test-only-secret-with-at-least-32-characters';
-  process.env.SUPABASE_URL = 'https://database.example';
-  process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-only-key';
+  process.env.SYSTEME_API_KEY = 'test-only';
+  process.env.BOT_PUBLIC_URL = 'https://bot.example';
   const originalFetch = globalThis.fetch;
-  let active = true;
-  const record = { code: 'TEST-1234', wachtwoord: hashPassword('test-password') };
-  globalThis.fetch = async () => ({ ok: true, text: async () => JSON.stringify(active ? [record] : []) });
-  async function call(method, body, token, origin = 'https://bot.example') {
-    const res = { statusCode: 200, headers: {}, setHeader(k, v) { this.headers[k] = v; }, status(s) { this.statusCode = s; return this; }, json(data) { this.data = data; return this; }, end() { return this; } };
-    await sessionHandler({ method, body, headers: { host: 'bot.example', origin, ...(token ? { authorization: `Bearer ${token}` } : {}) } }, res);
+  t.after(() => { globalThis.fetch = originalFetch; });
+  const contacts = {
+    'klant@example.com': { id: 101, email: 'klant@example.com', tags: [{ id: 1, name: 'Training + Bot' }], fields: [] },
+    'geen@example.com': { id: 202, email: 'geen@example.com', tags: [{ id: 9, name: 'nieuwsbrief' }], fields: [] },
+  };
+  let calls = [];
+  globalThis.fetch = async (url, init = {}) => {
+    calls.push({ url, method: init.method || 'GET', body: init.body ? JSON.parse(init.body) : undefined, headers: init.headers });
+    const u = new URL(url);
+    if (u.pathname === '/api/contacts' && u.searchParams.get('email')) {
+      const c = contacts[u.searchParams.get('email')];
+      return Response.json({ items: c ? [c] : [] });
+    }
+    if (u.pathname === '/api/tags') return Response.json({ items: [{ id: 55, name: 'bot-inloglink' }] });
+    const m = /^\/api\/contacts\/(\d+)$/.exec(u.pathname);
+    if (m && (init.method || 'GET') === 'GET') { const c = Object.values(contacts).find(x => String(x.id) === m[1]); return c ? Response.json(c) : new Response('', { status: 404 }); }
+    if (m && init.method === 'PATCH') return Response.json({});
+    if (/\/tags\/\d+$/.test(u.pathname) && init.method === 'DELETE') return new Response('', { status: 404 });
+    if (/\/tags$/.test(u.pathname) && init.method === 'POST') return new Response(null, { status: 204 });
+    return new Response('', { status: 500 });
+  };
+  async function call(body, method = 'POST', authorization = '') {
+    const res = { headers: {}, setHeader(k, v) { this.headers[k] = v; }, status(n) { this.code = n; return this; }, json(d) { this.data = d; return this; }, end() { return this; } };
+    await sessionHandler({ method, headers: { host: 'bot.example', origin: 'https://bot.example', authorization }, body }, res);
     return res;
   }
-  try {
-    assert.equal((await call('GET')).statusCode, 401);
-    assert.equal((await call('POST', { action: 'renew' })).statusCode, 401);
-    assert.equal((await call('POST', { action: 'login', code: 'TEST-1234', password: 'wrong-password' })).statusCode, 401);
-    const login = await call('POST', { action: 'login', code: 'TEST-1234', password: 'test-password' });
-    assert.equal(login.statusCode, 200); assert.ok(login.data.token);
-    assert.equal((await call('GET', undefined, login.data.token)).statusCode, 200);
-    const renewal = await call('POST', { action: 'renew' }, login.data.token);
-    assert.equal(renewal.statusCode, 200); assert.ok(renewal.data.token);
-    assert.equal((await call('POST', { action: 'renew' }, renewal.data.token, 'https://other.example')).statusCode, 403);
-    active = false;
-    assert.equal((await call('POST', { action: 'renew' }, renewal.data.token)).statusCode, 401);
-  } finally { globalThis.fetch = originalFetch; }
+  // Klant met juiste tag: link wordt in Systeme.io gezet en tag opnieuw toegevoegd.
+  calls = [];
+  let res = await call({ action: 'request-link', email: ' Klant@Example.com ' });
+  assert.equal(res.code, 200);
+  const patch = calls.find(c => c.method === 'PATCH');
+  assert.ok(patch, 'login link is written to the contact field');
+  assert.equal(patch.headers['Content-Type'], 'application/merge-patch+json');
+  assert.equal(patch.headers['X-API-Key'], 'test-only');
+  const link = patch.body.fields[0].value;
+  assert.equal(patch.body.fields[0].slug, 'bot_inloglink');
+  assert.match(link, /^https:\/\/bot\.example\/\?login=/);
+  assert.ok(calls.some(c => c.method === 'POST' && c.url.endsWith('/contacts/101/tags') && c.body.tagId === 55));
+  assert.ok(!JSON.stringify(calls).toLowerCase().includes('password'));
+  // Zonder tag of onbekend: zelfde antwoord, maar geen mail.
+  for (const email of ['geen@example.com', 'onbekend@example.com']) {
+    calls = [];
+    const other = await call({ action: 'request-link', email });
+    assert.equal(other.code, 200);
+    assert.equal(other.data.message, res.data.message);
+    assert.ok(!calls.some(c => c.method !== 'GET'));
+  }
+  // Binnen een minuut opnieuw aanvragen stuurt geen tweede mail.
+  contacts['klant@example.com'].fields = [{ slug: 'bot_inloglink', value: link }];
+  calls = [];
+  await call({ action: 'request-link', email: 'klant@example.com' });
+  assert.ok(!calls.some(c => c.method === 'PATCH'));
+  // Link inwisselen voor een sessie.
+  const token = new URL(link).searchParams.get('login');
+  res = await call({ action: 'verify-link', token });
+  assert.equal(res.code, 200);
+  assert.equal(currentCode({ headers: { authorization: `Bearer ${res.data.token}` } }), 'SIO-101');
+  // Vervalste of verlopen link werkt niet.
+  assert.equal((await call({ action: 'verify-link', token: token + 'x' })).code, 401);
+  // Tag weggehaald: geen toegang meer.
+  contacts['klant@example.com'].tags = [];
+  assert.equal((await call({ action: 'verify-link', token })).code, 403);
+  // Sessie controleren en vernieuwen zonder database.
+  assert.equal((await call(undefined, 'GET', `Bearer ${res.data.token}`)).code, 200);
+  assert.equal((await call(undefined, 'GET')).code, 401);
+  const renewed = await call({ action: 'renew' }, 'POST', `Bearer ${res.data.token}`);
+  assert.equal(currentCode({ headers: { authorization: `Bearer ${renewed.data.token}` } }), 'SIO-101');
+  // Oude manieren van inloggen bestaan niet meer.
+  assert.equal((await call({ action: 'login', code: 'TEST-1234', password: 'geheim123' })).code, 400);
 });
-

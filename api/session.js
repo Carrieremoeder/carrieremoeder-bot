@@ -1,5 +1,15 @@
-import { activeCode, clearSession, db, hashPassword, requireCode, sameOrigin, setSession, verifyPassword } from '../lib/security.js';
-import { AuthError, handleEmailAction } from '../lib/emailAuth.js';
+import { clearSession, createLoginToken, issuedAtOfLink, readLoginToken, requireCode, sameOrigin, setSession } from '../lib/security.js';
+import { currentLoginField, findContact, getContact, hasAccess, normaliseEmail, sendLoginLink } from '../lib/systeme.js';
+
+const RESEND_COOLDOWN_MS = 60 * 1000;
+const SENT_MESSAGE = 'Als dit e-mailadres toegang heeft tot de Bot, ontvang je binnen een paar minuten een inloglink. Controleer ook je spammap. Geen mail ontvangen? Gebruik het e-mailadres waarmee je de Bot hebt gekocht.';
+
+function publicUrl(req) {
+  const configured = process.env.BOT_PUBLIC_URL;
+  if (configured) return configured.replace(/\/+$/, '');
+  return 'https://' + req.headers.host;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   try {
@@ -10,33 +20,38 @@ export default async function handler(req, res) {
     if (req.method === 'DELETE') { if (!sameOrigin(req)) return res.status(403).end(); clearSession(res); return res.status(204).end(); }
     if (req.method !== 'POST') return res.status(405).end();
     if (!sameOrigin(req)) return res.status(403).end();
-    if (String(req.body?.action || '').startsWith('email-')) return await handleEmailAction(req, res, setSession);
-    if (req.body?.action === 'renew') {
+    const action = req.body?.action;
+
+    if (action === 'renew') {
       const code = await requireCode(req, res);
       return code && res.status(200).json({ loggedIn: true, token: setSession(res, code) });
     }
-    const code = String(req.body?.code || '').trim().toUpperCase();
-    if (!/^[A-Z0-9-]{4,80}$/.test(code)) return res.status(400).json({ error: 'Controleer je toegangscode.' });
-    const record = await activeCode(code);
-    if (!record) return res.status(401).json({ error: 'Toegangscode niet herkend.' });
-    if (record.auth_user_id) return res.status(401).json({ error: 'Dit account gebruikt nu je e-mailadres. Log daarmee in.' });
-    if (req.body?.action === 'check') return res.status(200).json({ needsPassword: !!record.wachtwoord });
-    const password = String(req.body?.password || '');
-    if (password.length < 8 || password.length > 128) return res.status(400).json({ error: 'Gebruik een wachtwoord van minimaal 8 tekens.' });
-    if (req.body?.action === 'register') {
-      if (record.wachtwoord) return res.status(409).json({ error: 'Dit account heeft al een wachtwoord.' });
-      // Voor productie dient de code voldoende willekeurig en geheim te zijn.
-      const updated = await db('codes', { method: 'PATCH', query: `?code=eq.${encodeURIComponent(code)}&wachtwoord=is.null`, data: { wachtwoord: hashPassword(password) } });
-      if (!updated?.length) return res.status(409).json({ error: 'Dit account heeft inmiddels een wachtwoord.' });
-    } else if (req.body?.action === 'login') {
-      if (!verifyPassword(password, code, record.wachtwoord)) return res.status(401).json({ error: 'Onjuist wachtwoord.' });
-      if (!record.wachtwoord.startsWith('scrypt:')) await db('codes', { method: 'PATCH', query: `?code=eq.${encodeURIComponent(code)}`, data: { wachtwoord: hashPassword(password) } });
-    } else return res.status(400).end();
-    return res.status(200).json({ loggedIn: true, token: setSession(res, code) });
+
+    // Stap 1: inloglink aanvragen. Altijd hetzelfde antwoord, zodat niemand kan uitzoeken wie klant is.
+    if (action === 'request-link') {
+      const email = normaliseEmail(req.body?.email);
+      if (!email) return res.status(400).json({ error: 'Vul een geldig e-mailadres in.' });
+      const contact = await findContact(email);
+      if (contact && hasAccess(contact)) {
+        const recentlySent = Date.now() - issuedAtOfLink(currentLoginField(contact)) < RESEND_COOLDOWN_MS;
+        if (!recentlySent) await sendLoginLink(contact, `${publicUrl(req)}/?login=${createLoginToken(contact.id)}`);
+      }
+      return res.status(200).json({ sent: true, message: SENT_MESSAGE });
+    }
+
+    // Stap 2: de klant klikt op de link in de mail.
+    if (action === 'verify-link') {
+      const login = readLoginToken(String(req.body?.token || ''));
+      if (!login) return res.status(401).json({ error: 'Deze inloglink is verlopen of ongeldig. Vraag hieronder een nieuwe aan.' });
+      let contact = null;
+      try { contact = await getContact(login.contactId); } catch (error) { if (error.status !== 404) throw error; }
+      if (!hasAccess(contact)) return res.status(403).json({ error: 'We vinden geen actieve toegang tot de Bot bij dit account.' });
+      return res.status(200).json({ loggedIn: true, token: setSession(res, 'SIO-' + login.contactId) });
+    }
+
+    return res.status(400).json({ error: 'Ongeldige aanvraag.' });
   } catch (error) {
-    if (error instanceof AuthError) return res.status(error.status).json({ error: error.message });
-    console.error('Bot session:', error.message);
-    return res.status(500).json({ error: 'Inloggen lukt momenteel niet.' });
+    console.error('Bot session:', { type: error?.name || 'error', status: error?.status || 0 });
+    return res.status(503).json({ error: 'Inloggen lukt momenteel niet. Probeer het over een paar minuten opnieuw.' });
   }
 }
-
