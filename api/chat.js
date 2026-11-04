@@ -1,34 +1,84 @@
 import { readEvents } from '../lib/coachStream.js';
 import { BOT_INSTRUCTIES } from '../lib/botInstructions.js';
-import { requireCode, sameOrigin } from '../lib/security.js';
+import { db, requireCode, sameOrigin } from '../lib/security.js';
 
-function toClaude(message) {
+// De coach draait op de OpenAI Responses API.
+// Privacy: `store: false` zorgt dat OpenAI het antwoord niet bewaart voor latere opvraging,
+// en deze server slaat zelf geen gespreksinhoud op en logt die ook niet.
+// OPENAI_BASE_URL is optioneel, bijvoorbeeld https://eu.api.openai.com voor EU-dataresidentie (als je OpenAI-project dat ondersteunt).
+const openaiUrl = () => `${(process.env.OPENAI_BASE_URL || 'https://api.openai.com').replace(/\/+$/, '')}/v1/responses`;
+const DEFAULT_MODEL = 'gpt-5.6-sol';
+const DEFAULT_LIGHT_MODEL = 'gpt-5.6-terra';
+const DEFAULT_DAILY_PREMIUM = 10;
+
+// Kiest het model: de eerste N berichten per dag het sterke model, daarna het lichtere.
+// Telt alleen aantallen per toegangscode per dag (geen inhoud). Lukt tellen niet, dan het lichtere model.
+async function chooseModel(code) {
+  const premium = process.env.BOT_MODEL || DEFAULT_MODEL;
+  const light = process.env.BOT_LIGHT_MODEL || DEFAULT_LIGHT_MODEL;
+  const limit = Number.parseInt(process.env.BOT_DAILY_PREMIUM ?? '', 10);
+  const daily = Number.isFinite(limit) && limit >= 0 ? limit : DEFAULT_DAILY_PREMIUM;
+  // Dagmaximum 0 = altijd het lichte model; dan hoeft er ook niets geteld te worden.
+  if (daily === 0) return { model: light, light: false };
+  try {
+    const count = Number(await db('rpc/bot_increment_usage', { method: 'POST', data: { p_code: code } }));
+    if (!Number.isFinite(count)) throw new Error('Ongeldige teller');
+    return count <= daily ? { model: premium, light: false } : { model: light, light: true };
+  } catch (error) {
+    console.error('Bot usage:', { type: 'count_failed' });
+    return { model: light, light: true };
+  }
+}
+
+// Zet het berichtformaat van de app om naar het formaat van OpenAI.
+function toOpenAI(message) {
   if (typeof message.content === 'string') return { role: message.role, content: message.content.slice(0, 20000) };
   if (message.role !== 'user' || !Array.isArray(message.content)) throw new Error('Ongeldige berichtinhoud');
   const parts = message.content.map(part => {
-    if (part?.type === 'text' && typeof part.text === 'string') return { type: 'text', text: part.text.slice(0, 20000) };
-    if (part?.type === 'image' && ['image/png','image/jpeg','image/webp'].includes(part.source?.media_type) && /^[A-Za-z0-9+/=]+$/.test(part.source?.data || ''))
-      return { type: 'image', source: { type: 'base64', media_type: part.source.media_type, data: part.source.data } };
+    if (part?.type === 'text' && typeof part.text === 'string') return { type: 'input_text', text: part.text.slice(0, 20000) };
+    // Afbeeldingen worden bewust niet geaccepteerd (dataminimalisatie): alleen tekst.
     throw new Error('Bestandstype niet ondersteund');
   });
   return { role: 'user', content: parts };
 }
+
+function outputText(data) {
+  if (typeof data?.output_text === 'string') return data.output_text;
+  return (data?.output || [])
+    .filter(item => item?.type === 'message')
+    .flatMap(item => item.content || [])
+    .filter(part => part?.type === 'output_text' && typeof part.text === 'string')
+    .map(part => part.text)
+    .join('\n');
+}
+
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return res.status(405).end();
   if (!sameOrigin(req)) return res.status(403).json({ error: 'Ongeldige aanvraag' });
   try {
-    if (!(await requireCode(req, res))) return;
+    const code = await requireCode(req, res);
+    if (!code) return;
     const messages = req.body?.messages;
-    if (!Array.isArray(messages) || !messages.length || messages.length > 30 || JSON.stringify(messages).length > 7_000_000 || messages.some(m => !['user','assistant'].includes(m?.role))) return res.status(400).json({ error: 'Ongeldig gesprek' });
+    if (!Array.isArray(messages) || !messages.length || messages.length > 30 || JSON.stringify(messages).length > 7_000_000 || messages.some(m => !['user', 'assistant'].includes(m?.role))) return res.status(400).json({ error: 'Ongeldig gesprek' });
     let input;
-    try { input = messages.map(toClaude); } catch { return res.status(400).json({ error: 'Ongeldige berichtinhoud of bestandstype.' }); }
-    if (!process.env.ANTHROPIC_API_KEY) return res.status(503).json({ error: 'AI is nog niet ingesteld.' });
+    try { input = messages.map(toOpenAI); } catch { return res.status(400).json({ error: 'Ongeldige berichtinhoud of bestandstype.' }); }
+    if (!process.env.OPENAI_API_KEY) return res.status(503).json({ error: 'AI is nog niet ingesteld.' });
     const streaming = req.body?.stream === true;
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST', headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
-      signal: AbortSignal.timeout(45_000),
-      body: JSON.stringify({ model: process.env.BOT_CLAUDE_MODEL || 'claude-sonnet-4-6', system: BOT_INSTRUCTIES, messages: input, max_tokens: 2200, stream: streaming })
+    const { model, light } = await chooseModel(code);
+    const response = await fetch(openaiUrl(), {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(55_000),
+      body: JSON.stringify({
+        model,
+        instructions: BOT_INSTRUCTIES,
+        input,
+        max_output_tokens: 3000,
+        reasoning: { effort: ['minimal', 'low', 'medium', 'high'].includes(process.env.BOT_REASONING_EFFORT) ? process.env.BOT_REASONING_EFFORT : 'low' },
+        store: false,
+        stream: streaming
+      })
     });
     if (!response.ok) {
       // Log uitsluitend metadata; nooit promptinhoud, sleutel of upstream foutbericht.
@@ -48,14 +98,16 @@ export default async function handler(req, res) {
       res.setHeader('X-Accel-Buffering', 'no');
       res.flushHeaders?.();
       const emit = event => res.write('data: ' + JSON.stringify(event) + '\n\n');
+      if (light) emit({ type: 'meta', light: true });
       let text = '';
       try {
         for await (const event of readEvents(response.body)) {
-          if (event.type === 'error') throw new Error('Upstream stream error');
-          const delta = event.type === 'content_block_delta' && event.delta?.type === 'text_delta' ? event.delta.text
-            : event.type === 'content_block_start' && event.content_block?.type === 'text' ? event.content_block.text : '';
-          if (delta) { text += delta; emit({ type: 'text', text: delta }); }
-          if (event.type === 'message_stop') {
+          if (event.type === 'error' || event.type === 'response.failed' || event.type === 'response.incomplete') throw new Error('Upstream stream error');
+          if (event.type === 'response.output_text.delta' && typeof event.delta === 'string' && event.delta) {
+            text += event.delta;
+            emit({ type: 'text', text: event.delta });
+          }
+          if (event.type === 'response.completed') {
             if (!text.trim()) throw new Error('Empty answer');
             emit({ type: 'done' });
             return res.end();
@@ -68,9 +120,10 @@ export default async function handler(req, res) {
       }
     }
     const data = await response.json();
-    const text = (data.content || []).filter(item => item.type === 'text').map(item => item.text).join('\n');
+    if (data?.status && data.status !== 'completed') return res.status(502).json({ error: 'De coach is tijdelijk niet beschikbaar.' });
+    const text = outputText(data);
     if (!text.trim()) return res.status(502).json({ error: 'De coach is tijdelijk niet beschikbaar.' });
-    return res.status(200).json({ content: [{ text }] });
+    return res.status(200).json({ content: [{ text }], light });
   } catch (error) {
     console.error('Bot AI:', { type: error?.name === 'TimeoutError' ? 'timeout' : 'request_failed' });
     return res.status(500).json({ error: 'De coach is tijdelijk niet beschikbaar.' });

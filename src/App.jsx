@@ -1,6 +1,5 @@
 import { readCoachReply } from "../lib/coachStream.js";
 import * as K from "./designTokens.js";
-import { brandLogo } from "./brandLogo.js";
 import { useState, useEffect, useRef } from "react";
 import { tabSession, WARNING_MS } from "./browserSession.js";
 import EmailLogin, { readAuthReturn } from "./EmailLogin.jsx";
@@ -62,26 +61,36 @@ const g = {
   bBody: role => ({ minWidth: 0, maxWidth: role === "assistant" ? "100%" : "85%", padding: "12px 16px", background: role === "user" ? K.kleur.accentVlakLicht : C.white, color: C.dark, fontSize: "14px", lineHeight: 1.55, border: `1px solid ${role === "user" ? K.kleur.accentRandZacht : C.border}`, borderLeft: role === "assistant" ? `2px solid ${K.kleur.accentSteun}` : undefined, overflowWrap: "anywhere" }),
   inputBar: { padding: "18px 32px 16px", maxWidth: "860px", width: "100%", margin: "0 auto" },
   inputBarOuter: { minWidth: 0, maxWidth: "100%", borderTop: `1px solid ${K.kleur.randStructuur}`, background: C.bg, flexShrink: 0 },
-  inputRow: { display: "flex", gap: "8px", alignItems: "flex-end" },
-  chatTa: { flex: 1, minWidth: 0, padding: "12px 14px", fontSize: "14px", border: `1px solid ${K.kleur.randVeld}`, borderRadius: 0, fontFamily: K.font.sans, resize: "none", lineHeight: 1.6, minHeight: "46px", maxHeight: "120px", color: C.dark, background: C.white },
-  sendBtn: disabled => ({ ...K.actieKnop, padding: "10px 16px", minHeight: "46px", fontSize: "18px", opacity: disabled ? 0.45 : 1 }),
-  attachBtn: active => ({ ...K.secundaireKnop, padding: "10px 12px", minHeight: "46px", fontSize: "18px", background: active ? C.light : "transparent" }),
+  inputRow: { display: "flex", gap: "8px", alignItems: "center", justifyContent: "flex-end", marginTop: "8px" },
+  chatTa: { display: "block", width: "100%", minWidth: 0, padding: "12px 14px", fontSize: "14px", border: `1px solid ${K.kleur.randVeld}`, borderRadius: 0, fontFamily: K.font.sans, resize: "none", lineHeight: 1.6, minHeight: "46px", maxHeight: "120px", color: C.dark, background: C.white },
+  sendBtn: disabled => ({ ...K.actieKnop, padding: "10px 18px", minHeight: "44px", fontSize: "13px", opacity: disabled ? 0.45 : 1 }),
+  attachBtn: active => ({ ...K.secundaireKnop, padding: "10px 14px", minHeight: "44px", fontSize: "13px", background: active ? C.light : "transparent" }),
   dot: delay => ({ display: "inline-block", width: "5px", height: "5px", borderRadius: "50%", background: C.terra, margin: "0 2px", animation: "bounce 1.2s ease-in-out infinite", animationDelay: delay }),
   emptyWrap: { padding: "0 0 20px", maxWidth: "740px", margin: "0 auto" },
   emptyH: { ...K.serifKop("40px"), margin: "0 0 12px" },
   emptyP: { fontSize: "14px", color: K.kleur.tekstZacht, lineHeight: 1.65, margin: 0, maxWidth: "540px" },
+  quickBtns: { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "12px", margin: "20px 0 6px" },
+  quickBtn: { display: "flex", flexDirection: "column", alignItems: "flex-start", textAlign: "left", padding: "18px 16px", background: C.white, border: `1px solid ${C.border}`, color: C.dark, cursor: "pointer", fontFamily: K.font.sans },
+  quickTitle: { fontSize: "14px", fontWeight: 600, lineHeight: 1.35 },
+  quickDetail: { fontSize: "12px", color: K.kleur.tekstZacht, lineHeight: 1.5, margin: "6px 0 0" },
 };
 function BrandHeader({ loggedIn = false, loading = false, sidebarOpen, onMenu, onLogout }) {
   return <header style={g.hdr} className="hdr-bar">
     <div style={g.hdrLeft} className="hdr-brand">
       {loggedIn && <button type="button" style={K.icoonKnop} onClick={onMenu} aria-label="Gesprekkenmenu" aria-expanded={sidebarOpen} aria-controls="gesprekkenmenu">☰</button>}
-      <img src={brandLogo} alt="CARRIEREMOEDER" className="brand-logo" style={{ height: "36px", width: "auto", display: "block", flexShrink: 0 }} />
+      <img src="/meester-masha-logo.png" alt="Meester Masha" className="brand-logo" style={{ height: "52px", width: "auto", display: "block", flexShrink: 0 }} />
       <span style={g.hdrDivider} className="hdr-divider" />
       <span style={g.sub} className="hdr-sub">Always In Control Bot</span>
     </div>
     {loggedIn && <button style={g.ghostBtn} onClick={onLogout} disabled={loading}>Uitloggen</button>}
   </header>;
 }
+
+const QUICK_CHOICES = [
+  { tint: "#FBF7F0", title: "Ik heb een bericht van mijn ex ontvangen", detail: "Kopieer het bericht (in WhatsApp: lang drukken → Kopiëren) en vervang namen door bijvoorbeeld \"mijn ex\".", draft: "Ik heb dit bericht van mijn ex ontvangen: " },
+  { tint: "#F4EEE5", title: "Ik wil zelf een bericht aan mijn ex sturen", detail: "Vind woorden die duidelijk zijn en bij jouw grenzen passen.", draft: "Ik wil zelf een bericht aan mijn ex sturen. Dit wil ik duidelijk maken: " },
+  { tint: "#EEF0E9", title: "Ik wil een gesprek voorbereiden", detail: "Bereid een gesprek met je ex voor, zodat je rustig en met regie het gesprek ingaat.", draft: "Ik wil een gesprek met mijn ex voorbereiden. Het gesprek gaat over: " }
+];
 
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -96,6 +105,7 @@ export default function App() {
   const [pendingImg, setPendingImg] = useState(null);
   const [uploadingImg, setUploadingImg] = useState(false);
   const [sessionNotice, setSessionNotice] = useState("");
+  const [lightMode, setLightMode] = useState(false);
   const [idleSeconds, setIdleSeconds] = useState(null);
   const sessionGeneration = useRef(0);
   const chatController = useRef(null);
@@ -111,7 +121,7 @@ export default function App() {
       chatController.current?.abort();
       imageReader.current?.abort();
       setLoggedIn(false); setHistory([]); setConversations([]); setActiveId(null);
-      setInput(""); setPendingImg(null); setChatError(""); setLoading(false); setUploadingImg(false); setIdleSeconds(null);
+      setInput(""); setPendingImg(null); setChatError(""); setLoading(false); setUploadingImg(false); setIdleSeconds(null); setLightMode(false);
       setSessionNotice(reason === 'idle' ? 'Je bent automatisch uitgelogd na 30 minuten zonder activiteit. Log opnieuw in om verder te gaan.' : reason === 'expired' ? 'Je sessie is verlopen. Log opnieuw in om verder te gaan.' : '');
     });
     let cancelled = false;
@@ -161,20 +171,6 @@ export default function App() {
     };
   }, [loggedIn]);
   useEffect(() => {
-    if (!loggedIn) return;
-    let cancelled = false;
-    const generation = sessionGeneration.current;
-    api("conversations").then(data => {
-      if (cancelled || generation !== sessionGeneration.current || !tabSession.token()) return;
-      if (Array.isArray(data.conversations)) {
-        setConversations(data.conversations);
-        if (data.conversations.length) { setActiveId(data.conversations[0].id); setHistory(data.conversations[0].messages || []); }
-      }
-    }).catch(() => {});
-    return () => { cancelled = true; };
-  }, [loggedIn]);
-
-  useEffect(() => {
     const query = window.matchMedia("(max-width: 720px)");
     const updateMenu = () => setSidebarOpen(!query.matches);
     query.addEventListener("change", updateMenu);
@@ -192,7 +188,8 @@ export default function App() {
     else scrollRef.current?.scrollTo({ top: 0 });
   }, [history, loading]);
 
-  function saveConversations(convs) { if (!tabSession.token()) return; setConversations(convs); api("conversations", { method: "PUT", body: JSON.stringify({ conversations: convs }) }).catch(() => { if (tabSession.token()) alert("Gesprek opslaan is niet gelukt. Kopieer belangrijke tekst voordat je de pagina sluit."); }); }
+  // Privacy: gesprekken bestaan alleen in dit tabblad en worden nergens opgeslagen.
+  function saveConversations(convs) { if (!tabSession.token()) return; setConversations(convs); }
 
   function closeMobileMenu() { if (window.innerWidth <= 720) setSidebarOpen(false); }
 
@@ -207,7 +204,7 @@ export default function App() {
 
   function deleteConversation(id) {
     if (loading) return;
-    if (!window.confirm("Dit gesprek definitief uit de actieve database verwijderen?")) return;
+    if (!window.confirm("Dit gesprek nu wissen?")) return;
     const updated = conversations.filter(c => c.id !== id);
     saveConversations(updated);
     if (activeId === id) { setActiveId(updated[0]?.id || null); setHistory(updated[0]?.messages || []); }
@@ -224,21 +221,6 @@ export default function App() {
       return { ...c, messages: msgs, title: rawText.slice(0, 45) + (rawText.length > 45 ? "..." : "") };
     });
     saveConversations(updated);
-  }
-
-  function handleImageUpload(file) {
-    if (!file) return;
-    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type) || file.size > 4_000_000) { alert("Gebruik een JPG, PNG of WebP van maximaal 4 MB."); return; }
-    setUploadingImg(true);
-    const reader = new FileReader();
-    imageReader.current = reader;
-    const generation = sessionGeneration.current;
-    reader.onload = (e) => {
-      if (generation !== sessionGeneration.current || !tabSession.token()) return;
-      setPendingImg({ base64: e.target.result.split(",")[1], type: file.type, name: file.name, preview: e.target.result });
-      setUploadingImg(false);
-    };
-    reader.readAsDataURL(file);
   }
 
   async function send() {
@@ -279,14 +261,14 @@ export default function App() {
     chatController.current = controller;
 
     try {
-      const apiMessages = nh.slice(-30).map(({ role, content }) => ({ role, content }));
+      const apiMessages = nh.slice(-10).map(({ role, content }) => ({ role, content }));
       const res = await fetch("/api/chat", { method: "POST", signal: controller.signal, headers: { "Content-Type": "application/json", Authorization: `Bearer ${tabSession.token()}` }, body: JSON.stringify({ messages: apiMessages, stream: true }) });
       if (generation !== sessionGeneration.current || !tabSession.token()) return;
       if (res.status === 401) { tabSession.clear('expired'); return; }
       const reply = await readCoachReply(res, text => {
         if (generation !== sessionGeneration.current || !tabSession.token()) return;
         setHistory([...nh, { role: "assistant", content: text }]);
-      });
+      }, meta => { if (meta?.light && generation === sessionGeneration.current) setLightMode(true); });
       if (generation !== sessionGeneration.current || !tabSession.token()) return;
       const newHistory = [...nh, { role: "assistant", content: reply }];
       setHistory(newHistory);
@@ -302,6 +284,34 @@ export default function App() {
   }
 
   function logout() { tabSession.clear(); api("session", { method: "DELETE" }).catch(() => {}); }
+  // Privacy: het bestand wordt in de browser gemaakt en direct op het apparaat van de gebruiker opgeslagen.
+  function downloadConversation() {
+    if (!history.length || loading) return;
+    const now = new Date();
+    const plain = text => String(text || "").replace(/\*\*(.+?)\*\*/g, "$1").replace(/^#{1,6}\s+/gm, "").trim();
+    const lines = [
+      "Always In Control Bot – Meester Masha",
+      "Gesprek van " + now.toLocaleDateString("nl-NL") + " om " + now.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" }),
+      "",
+      "Dit bestand staat alleen op je eigen apparaat. Bewaar het op een veilige plek waar je ex of kinderen niet bij kunnen.",
+      "Deze coaching is geen juridisch advies.",
+      "",
+      "────────────────────────────────────────",
+      ""
+    ];
+    for (const m of history) {
+      const display = m.display || m.content;
+      const text = m.role === "user" ? (typeof display === "string" ? display : display?.text || "") : (typeof m.content === "string" ? m.content : "");
+      lines.push(m.role === "user" ? "JIJ:" : "ALWAYS IN CONTROL BOT:", plain(text), "");
+    }
+    const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "gesprek-always-in-control-bot-" + now.toISOString().slice(0, 10) + ".txt";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
 
   function renderMessage(m, i) {
     const display = m.display || m.content;
@@ -315,6 +325,8 @@ export default function App() {
           {image && <img src={image} alt="bijlage" style={{ maxWidth: "180px", maxHeight: "120px", border: "1px solid #eee", display: "block", marginBottom: "8px", borderRadius: "4px" }} />}
           {isUser ? <span>{text}</span> : <div className="coach-answer" dangerouslySetInnerHTML={{ __html: md(typeof m.content === "string" ? m.content : text) }} />}
         </div>
+        {!isUser && !(loading && i === history.length - 1) && <button type="button" style={{ ...g.ghostBtn, marginTop: "6px", fontSize: "10px", padding: "4px 8px" }}
+          onClick={() => navigator.clipboard?.writeText(typeof m.content === "string" ? m.content : text).then(() => alert("Antwoord gekopieerd."), () => alert("Kopiëren lukt niet. Selecteer de tekst en kopieer handmatig."))}>Kopieer antwoord</button>}
       </div>
     );
   }
@@ -324,7 +336,8 @@ ${K.TOKENS_CSS}
 *{box-sizing:border-box}html,body,#root{width:100%;min-width:0;margin:0}html{-webkit-text-size-adjust:100%;text-size-adjust:100%}body{background:var(--vlak-pagina)}
 .hdr-brand{max-width:100%}.brand-logo{max-width:100%;object-fit:contain}.coach-answer{min-width:0;max-width:100%;overflow-wrap:anywhere}
 button,textarea,input{font:inherit}button:disabled{cursor:default;opacity:.5}
-button:not(:disabled):hover{background:var(--accent-vlak)}
+button:not(:disabled):not(.quick-card):hover{background:var(--accent-vlak)}
+.quick-card{transition:border-color .18s}.quick-card:hover{border-color:var(--accent-rand)!important}
 button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:var(--rand-structuur)}
 @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}
@@ -333,11 +346,11 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
 @media(max-width:720px){
 .hdr-bar{padding:12px max(14px,env(safe-area-inset-right)) 12px max(14px,env(safe-area-inset-left))!important}.hdr-brand{flex:1 1 180px;flex-wrap:wrap;gap:8px!important}
 .hdr-sub{font-size:9px!important;white-space:normal!important;overflow-wrap:anywhere}.hdr-divider{display:none!important}
-.brand-logo{height:32px!important}.hdr-bar>button{padding:8px!important;font-size:9px!important}
+.brand-logo{height:44px!important}.hdr-bar>button{padding:8px!important;font-size:9px!important}
 .chat-sidebar{position:absolute;inset:0 auto 0 0;z-index:20;width:min(280px,85vw)!important;min-width:0!important}
 .menu-backdrop{display:block;position:absolute;inset:0;background:rgba(28,20,16,.22);border:0;z-index:19}
 .chat-messages{padding:24px 18px!important}.welcome{padding:0 0 18px!important}
-.welcome h2{font-size:34px!important}
+.welcome h2{font-size:34px!important}.quick-choices{grid-template-columns:1fr!important;gap:8px!important}.quick-card{padding:14px!important}
 .composer{padding:14px max(14px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))!important}input,textarea,select{font-size:16px!important}
 .composer button{flex-shrink:0}.composer-hints>span{min-width:0;overflow-wrap:anywhere}
 .composer-hints{flex-direction:column;gap:5px}.keyboard-hint{display:none}
@@ -369,6 +382,7 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
         {sidebarOpen && <aside id="gesprekkenmenu" aria-label="Gesprekken" className="chat-sidebar" style={g.sidebar}>
           <button style={g.newBtn} disabled={loading} onClick={newConversation}>+ Nieuw gesprek</button>
           <div style={g.sideHeader}>Gesprekken</div>
+          <div style={{ padding: "0 16px 10px", fontSize: "11px", lineHeight: 1.5, color: C.muted }}>Gesprekken worden niet bewaard. Ze verdwijnen als je uitlogt of dit tabblad sluit. Wil je een gesprek houden? Kies "Gesprek downloaden".</div>
           {conversations.length === 0 && <div style={{ padding: "10px 16px", fontSize: "12px", color: C.muted }}>Nog geen gesprekken</div>}
           {conversations.map(conv => (
             <div key={conv.id} style={g.convItem(conv.id === activeId)}>
@@ -395,30 +409,28 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
           <div style={{ ...g.inputBarOuter, ...(history.length === 0 ? { borderTop: "none", overflowY: "auto", flex: 1, paddingTop: "28px" } : {}) }}>
             <div className="composer" style={g.inputBar}>
               {history.length === 0 && <div className="welcome" style={g.emptyWrap}>
-                <h2 style={g.emptyH}>Welk bericht wil je bespreken?</h2>
-                <p style={g.emptyP}>Plak het bericht van je ex, voeg een screenshot toe of vertel wat er is gebeurd.</p>
+                <h2 style={g.emptyH}>Wat houdt je nu bezig?</h2>
+                <p style={g.emptyP}>Kies waar je mee aan de slag wilt, of typ direct je situatie in het tekstvak.</p>
+                <div className="quick-choices" style={g.quickBtns}>{QUICK_CHOICES.map(q => (
+                  <button type="button" className="quick-card" key={q.title} style={{ ...g.quickBtn, background: q.tint }} onClick={() => { setInput(q.draft); setTimeout(() => { const t = taRef.current; if (t) { t.focus(); t.setSelectionRange(q.draft.length, q.draft.length); t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 120) + "px"; } }, 0); }}>
+                    <span style={g.quickTitle}>{q.title}</span>
+                    <span style={g.quickDetail}>{q.detail}</span>
+                  </button>
+                ))}</div>
+                <p style={{ ...g.emptyP, fontSize: "12px", marginTop: "8px" }}>Je gesprekken worden niet opgeslagen. Ze verdwijnen als je uitlogt of dit tabblad sluit. Je kunt een gesprek wel zelf downloaden.</p>
               </div>}
-              {pendingImg && (
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px", padding: "8px 12px", background: C.light, borderRadius: "6px" }}>
-                  <img src={pendingImg.preview} alt="" style={{ maxWidth: "50px", maxHeight: "34px", borderRadius: "3px" }} />
-                  <span style={{ fontSize: "12px", color: K.kleur.tekstZacht, flex: 1, minWidth: 0, overflowWrap: "anywhere" }}>{pendingImg.name}</span>
-                  <button onClick={() => setPendingImg(null)} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: "16px" }}>×</button>
-                </div>
-              )}
-              <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleImageUpload(e.target.files[0])} />
+              {lightMode && <p role="status" style={{ fontSize: "12px", color: K.kleur.tekstZacht, lineHeight: 1.5, margin: "0 0 8px" }}>Je hebt vandaag je berichten met de uitgebreide coach gebruikt. De coach helpt je verder in een lichtere versie. Morgen staat de uitgebreide coach weer voor je klaar.</p>}
               {chatError && <p role="alert" style={g.err}>{chatError} Je bericht staat nog klaar om opnieuw te versturen.</p>}
-              <div style={g.inputRow}>
-                <button onClick={() => fileRef.current?.click()} disabled={uploadingImg} style={g.attachBtn(!!pendingImg)} title="Screenshot uploaden">
-                  {uploadingImg ? "…" : "📎"}
-                </button>
-                <textarea aria-label="Jouw bericht" ref={taRef} style={{ ...g.chatTa, ...(history.length === 0 ? { minHeight: "110px" } : {}) }} value={input}
-                  onChange={e => { setInput(e.target.value); if (taRef.current) { taRef.current.style.height = "auto"; taRef.current.style.height = Math.min(taRef.current.scrollHeight, 120) + "px"; } }}
-                  onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-                  placeholder="Plak hier het bericht van je ex, of beschrijf de situatie..." rows={1} />
-                <button aria-label="Bericht versturen" style={g.sendBtn(loading || (!input.trim() && !pendingImg))} onClick={send} disabled={loading || (!input.trim() && !pendingImg)}>→</button>
+              <textarea aria-label="Jouw bericht" ref={taRef} style={{ ...g.chatTa, ...(history.length === 0 ? { minHeight: "110px" } : {}) }} value={input}
+                onChange={e => { setInput(e.target.value); if (taRef.current) { taRef.current.style.height = "auto"; taRef.current.style.height = Math.min(taRef.current.scrollHeight, 120) + "px"; } }}
+                onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
+                placeholder="Plak hier het bericht van je ex, of beschrijf de situatie..." rows={1} />
+              <div style={{ ...g.inputRow, justifyContent: history.length ? "space-between" : "flex-end" }}>
+                {history.length > 0 && <button type="button" style={g.attachBtn(false)} onClick={downloadConversation} disabled={loading} title="Sla dit gesprek op als bestand op je eigen apparaat">↓ Gesprek downloaden</button>}
+                <button aria-label="Bericht versturen" style={g.sendBtn(loading || (!input.trim() && !pendingImg))} onClick={send} disabled={loading || (!input.trim() && !pendingImg)}>Versturen →</button>
               </div>
               <div className="composer-hints" style={{ display: "flex", justifyContent: "space-between", gap: "18px", marginTop: "10px", lineHeight: 1.6 }}>
-                <span className="keyboard-hint" style={{ fontSize: "10px", color: C.muted }}>Shift+Enter voor nieuwe regel · 📎 voor screenshot</span>
+                <span className="keyboard-hint" style={{ fontSize: "10px", color: C.muted }}>Shift+Enter voor een nieuwe regel</span>
                 <span style={{ fontSize: "10px", color: C.muted }}>Maak namen en andere herkenbare details onleesbaar vóór je iets deelt</span>
               </div>
             </div>

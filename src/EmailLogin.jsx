@@ -61,14 +61,14 @@ export default function EmailLogin({ api, onLogin, notice, styles: g }) {
   const panel = { background: K.kleur.kaartZacht, border: `1px solid ${K.kleur.randVeld}`, padding: '12px 14px', marginBottom: '20px', fontSize: '13px', lineHeight: 1.65, color: K.kleur.tekstZacht };
   return <div style={{ ...g.loginWrap, margin: '40px auto' }}>
     <h1 style={g.loginH}>Always In Control Bot</h1>
-    <p style={{ ...g.loginP, marginBottom: '24px' }}>Een lastig bericht van je ex ontvangen? Plak het bericht, voeg een screenshot toe of vertel wat er speelt. De bot helpt je begrijpen wat er gebeurt, afwegen of je wilt reageren en een rustige, duidelijke reactie formuleren.</p>
+    <p style={{ ...g.loginP, marginBottom: '24px' }}>Een lastig bericht van je ex ontvangen? Plak het bericht of vertel wat er speelt. De bot helpt je begrijpen wat er gebeurt, afwegen of je wilt reageren en een rustige, duidelijke reactie formuleren.</p>
     {notice && <p role="status" style={panel}>{notice}</p>}
     {message && <p role="status" style={panel}>{message}</p>}
     {step === 'signup' && <p style={panel}>Gebruik hetzelfde e-mailadres waarmee je Always In Control Bot hebt gekocht. Kies een persoonlijk wachtwoord en bevestig je e-mailadres. Een account aanmaken sluit geen abonnement af.</p>}
     {step === 'signup' && <p style={{ fontSize: '12px', lineHeight: 1.6, color: K.kleur.tekstMeta }}>Heb je al een account voor de dossierapp? Dan kun je met dat e-mailadres en wachtwoord inloggen.</p>}
     {step === 'forgot' && <><h2 style={{ ...K.serifKop('26px'), margin: '0 0 10px' }}>Wachtwoord vergeten?</h2><p style={panel}>Vul je e-mailadres in. Je ontvangt een link waarmee je een nieuw wachtwoord kunt kiezen.</p></>}
     {step === 'reset' && <h2 style={{ ...K.serifKop('26px'), margin: '0 0 20px' }}>Nieuw wachtwoord instellen</h2>}
-    {(step === 'forgot' || step === 'reset') && <p style={{ fontSize: '12px', lineHeight: 1.6, color: K.kleur.tekstMeta }}>Je wijzigt het wachtwoord van je Carrièremoeder-account. Gebruik je ook de dossierapp? Dan geldt het nieuwe wachtwoord daar ook.</p>}
+    {(step === 'forgot' || step === 'reset') && <p style={{ fontSize: '12px', lineHeight: 1.6, color: K.kleur.tekstMeta }}>Je wijzigt het wachtwoord van je Carrieremoeder-account. Gebruik je ook de dossierapp? Dan geldt het nieuwe wachtwoord daar ook.</p>}
     {step !== 'sent' && <form onSubmit={submit}>
       {step !== 'reset' && step !== 'confirm' && <div style={g.fldGrp}>
         <label htmlFor="login-email" style={g.lbl}>E-mailadres</label>

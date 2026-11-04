@@ -1,11 +1,61 @@
-# Pilot: veilige toegang vóór gebruik
+# Hosting, veilige toegang en privacy
 
-Dit is een **bestaand prototype** en vervangt de GPT nog niet. Er is geen productie-uitrol gedaan.
+## Hosting: Cloudflare Pages
 
-1. Stel op Vercel server-side in: `ANTHROPIC_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `BOT_CLAUDE_MODEL` (standaard `claude-sonnet-4-6`), `BOT_SESSION_SECRET` (minimaal 32 willekeurige tekens). Zet geen service-role-key in de frontend.
-2. Controleer Supabase-tabellen `codes` (`code`, `actief`, `wachtwoord`) en `chat` (`code`, `data`, `updated_at`). Maak een back-up vóór wijzigingen. Gebruik voldoende willekeurige eenmalige toegangscodes; de eerste gebruiker die een code heeft kan anders een wachtwoord instellen.
-3. Sluit publieke toegang via de Supabase anon-sleutel tot `codes` en `chat` af. Controleer RLS en policies in Supabase. **Doe dit alleen samen met de nieuwe serverroutes**; anders werkt het oude prototype niet meer. De SQL-migratie hangt af van de bestaande policies en is daarom bewust niet blind uitgevoerd.
-4. Test: ongeldige code; eerste wachtwoord; bestaande wachtwoorden (worden na succesvolle login gehasht); chat zonder cookie geeft 401; andere code kan geen gesprek ophalen; verlopen sessie; gesprek opslaan en verwijderen; screenshot upload; mobiel. Neem een rate limit op bij de edge of API vóór brede uitrol, vooral voor inloggen en AI-gebruik.
-5. De prototypecode bewaart gesprekken in Supabase; nieuwe screenshots worden alleen voor de AI-aanroep verzonden en worden bij opslaan omgezet naar een tekstverwijzing. Oude prototypegesprekken kunnen nog base64-afbeeldingen bevatten; inventariseer en ruim die op. Stel een bewaartermijn, verwijderfunctie en back-upbeleid vast vóór klantenmigratie. Zet geen productielink in betaalmails tot dit is geregeld.
+De app draait op Cloudflare Pages (gratis abonnement; zakelijk gebruik is toegestaan).
 
-De coach gebruikt Anthropic Messages. Een bestaande `BOT_MODEL` voor OpenAI wordt bewust genegeerd. Controleer de Claude-aansluiting met een neutraal testbericht na uitrol. Lokale contracttests: `node --test tests/claude.test.js`.
+- **Build command:** `npm run build`
+- **Build output directory:** `dist`
+- De serverroutes staan in `functions/api/[[route]].js` (koppeling naar `api/chat.js` en `api/session.js`).
+- `wrangler.toml` zet de Node-compatibiliteit aan (`nodejs_compat`), nodig voor de wachtwoord-hashing.
+
+## Instellingen in Cloudflare (Settings → Variables and Secrets)
+
+Zet deze als **Secret** (versleuteld):
+
+- `OPENAI_API_KEY`: de API-sleutel van OpenAI (platform.openai.com → API keys).
+- `SUPABASE_URL` en `SUPABASE_SERVICE_ROLE_KEY`: voor de toegangscontrole (tabel `codes`) in het bot-project.
+- `BOT_SESSION_SECRET`: minimaal 32 willekeurige tekens.
+
+Optioneel:
+
+- `BOT_MODEL`: het sterke model, standaard `gpt-5.6-sol`.
+- `BOT_LIGHT_MODEL`: het lichtere model na het dagmaximum, standaard `gpt-5.6-terra`.
+- `BOT_DAILY_PREMIUM`: aantal berichten per gebruiker per dag met het sterke model, standaard `10`.
+
+Let op: omdat er een `wrangler.toml` is, worden gewone tekstvariabelen uit het dashboard genegeerd. Zet niet-geheime instellingen onder `[vars]` in `wrangler.toml`; geheime sleutels als Secret in het dashboard.
+- `OPENAI_BASE_URL`: bijvoorbeeld `https://eu.api.openai.com` voor EU-dataresidentie, alleen als je OpenAI-project dat ondersteunt.
+
+Zet nooit een service-role-key of API-sleutel in de frontend.
+
+## Privacy-opzet (dataminimalisatie)
+
+- **Gespreksinhoud wordt nergens opgeslagen.** Gesprekken bestaan alleen in het geopende tabblad en verdwijnen bij uitloggen, automatisch uitloggen of sluiten van het tabblad. Er is geen server-route meer om gesprekken op te slaan.
+- **OpenAI bewaart het antwoord niet voor latere opvraging:** elke aanroep gebruikt `store: false`. Gegevens via de API worden door OpenAI standaard niet gebruikt voor training. Sluit de verwerkersovereenkomst (DPA) van OpenAI af en controleer de actuele bewaartermijnen voor misbruikmonitoring in het OpenAI-dashboard.
+- **Geen inhoud in logs:** bij fouten logt de server alleen een statuscode en fouttype, nooit tekst of afbeeldingen.
+- **Wat je wél verwerkt:** e-mailadres, toegangscode, wachtwoord-hash en toegangsdatum (tabel `codes` en de gedeelde account-provider).
+- Afbeeldingen (screenshots) worden niet geaccepteerd: alleen tekst, zodat klanten zelf namen en details kunnen weghalen.
+- Cloudflare is verwerker voor de hosting. Neem Cloudflare op in je verwerkersoverzicht.
+
+## Eenmalig: dagteller aanmaken
+
+Voer `supabase/bot-usage.sql` uit in de SQL Editor van het **bot**-project. De tabel `bot_usage` bevat alleen toegangscode, datum en aantal (geen inhoud) en wordt na 2 dagen automatisch opgeschoond.
+
+## Eenmalig: oude gesprekken wissen
+
+De vorige versie bewaarde gesprekken in de Supabase-tabel `chat`. Voer na de uitrol `supabase/remove-chat-history.sql` uit in de SQL Editor van het **bot**-project.
+
+## Testen na uitrol
+
+Test deze punten:
+
+- inloggen met een ongeldige code;
+- inloggen met e-mail;
+- chatten zonder login (geeft 401);
+- een gesprek met tekst;
+- uitloggen en opnieuw inloggen (de gesprekken zijn dan weg);
+- gebruik op mobiel.
+
+Overweeg vóór brede uitrol een limiet op het aantal aanvragen (rate limit) voor inloggen en AI-gebruik.
+
+Lokale tests: `node --test tests/*.test.js tests/*.test.mjs`.
