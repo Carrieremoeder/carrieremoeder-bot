@@ -261,7 +261,7 @@ export default function App() {
     chatController.current = controller;
 
     try {
-      const apiMessages = nh.slice(-30).map(({ role, content }) => ({ role, content }));
+      const apiMessages = nh.slice(-10).map(({ role, content }) => ({ role, content }));
       const res = await fetch("/api/chat", { method: "POST", signal: controller.signal, headers: { "Content-Type": "application/json", Authorization: `Bearer ${tabSession.token()}` }, body: JSON.stringify({ messages: apiMessages, stream: true }) });
       if (generation !== sessionGeneration.current || !tabSession.token()) return;
       if (res.status === 401) { tabSession.clear('expired'); return; }

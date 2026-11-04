@@ -18,6 +18,8 @@ async function chooseModel(code) {
   const light = process.env.BOT_LIGHT_MODEL || DEFAULT_LIGHT_MODEL;
   const limit = Number.parseInt(process.env.BOT_DAILY_PREMIUM ?? '', 10);
   const daily = Number.isFinite(limit) && limit >= 0 ? limit : DEFAULT_DAILY_PREMIUM;
+  // Dagmaximum 0 = altijd het lichte model; dan hoeft er ook niets geteld te worden.
+  if (daily === 0) return { model: light, light: false };
   try {
     const count = Number(await db('rpc/bot_increment_usage', { method: 'POST', data: { p_code: code } }));
     if (!Number.isFinite(count)) throw new Error('Ongeldige teller');
@@ -72,7 +74,8 @@ export default async function handler(req, res) {
         model,
         instructions: BOT_INSTRUCTIES,
         input,
-        max_output_tokens: 8000,
+        max_output_tokens: 3000,
+        reasoning: { effort: ['minimal', 'low', 'medium', 'high'].includes(process.env.BOT_REASONING_EFFORT) ? process.env.BOT_REASONING_EFFORT : 'low' },
         store: false,
         stream: streaming
       })

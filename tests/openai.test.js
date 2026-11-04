@@ -35,6 +35,8 @@ test('OpenAI coach contract and authentication', async t => {
     assert.equal(calls[0].body.model, 'gpt-5.6-sol');
     assert.equal(res.data.light, false);
     assert.equal(calls[0].body.store, false);
+    assert.equal(calls[0].body.reasoning.effort, 'low');
+    assert.equal(calls[0].body.max_output_tokens, 3000);
     assert.ok(calls[0].body.instructions.length > 100);
     assert.equal(calls[0].body.input[1].content, 'Hallo');
     assert.equal(calls[0].body.input[2].content[0].type, 'input_text');
@@ -48,7 +50,12 @@ test('OpenAI coach contract and authentication', async t => {
     process.env.BOT_DAILY_PREMIUM = '3';
     await run([{ role: 'user', content: 'Hoi' }], { usage: 4 });
     assert.equal(calls[0].body.model, 'gpt-5.6-terra');
-    delete process.env.BOT_DAILY_PREMIUM;
+    process.env.BOT_DAILY_PREMIUM = '0';
+    process.env.BOT_LIGHT_MODEL = 'gpt-5.6-luna';
+    res = await run([{ role: 'user', content: 'Hoi' }], { usage: 999 });
+    assert.equal(calls[0].body.model, 'gpt-5.6-luna');
+    assert.equal(res.data.light, false);
+    delete process.env.BOT_DAILY_PREMIUM; delete process.env.BOT_LIGHT_MODEL;
   });
   await t.test('unauthenticated and cross-origin requests never reach AI', async () => {
     assert.equal((await run([{ role: 'user', content: 'Hoi' }], { anonymous: true })).code, 401);
