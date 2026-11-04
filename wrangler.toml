@@ -7,3 +7,4 @@ compatibility_flags = ["nodejs_compat"]
 # BOT_SESSION_SECRET) staan als "Secret" in het Cloudflare-dashboard.
 [vars]
 SUPABASE_URL = "https://ejtfgvlaygrcthjihwoa.supabase.co"
+BOT_DAILY_PREMIUM = "1"  # TIJDELIJK voor de test; standaard 10
