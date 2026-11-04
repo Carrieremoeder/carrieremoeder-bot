@@ -1,11 +1,28 @@
-# Pilot: veilige toegang vóór gebruik
+# Veilige toegang en privacy
 
-Dit is een **bestaand prototype** en vervangt de GPT nog niet. Er is geen productie-uitrol gedaan.
+## Instellingen op Vercel (server-side)
 
-1. Stel op Vercel server-side in: `ANTHROPIC_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `BOT_CLAUDE_MODEL` (standaard `claude-sonnet-4-6`), `BOT_SESSION_SECRET` (minimaal 32 willekeurige tekens). Zet geen service-role-key in de frontend.
-2. Controleer Supabase-tabellen `codes` (`code`, `actief`, `wachtwoord`) en `chat` (`code`, `data`, `updated_at`). Maak een back-up vóór wijzigingen. Gebruik voldoende willekeurige eenmalige toegangscodes; de eerste gebruiker die een code heeft kan anders een wachtwoord instellen.
-3. Sluit publieke toegang via de Supabase anon-sleutel tot `codes` en `chat` af. Controleer RLS en policies in Supabase. **Doe dit alleen samen met de nieuwe serverroutes**; anders werkt het oude prototype niet meer. De SQL-migratie hangt af van de bestaande policies en is daarom bewust niet blind uitgevoerd.
-4. Test: ongeldige code; eerste wachtwoord; bestaande wachtwoorden (worden na succesvolle login gehasht); chat zonder cookie geeft 401; andere code kan geen gesprek ophalen; verlopen sessie; gesprek opslaan en verwijderen; screenshot upload; mobiel. Neem een rate limit op bij de edge of API vóór brede uitrol, vooral voor inloggen en AI-gebruik.
-5. De prototypecode bewaart gesprekken in Supabase; nieuwe screenshots worden alleen voor de AI-aanroep verzonden en worden bij opslaan omgezet naar een tekstverwijzing. Oude prototypegesprekken kunnen nog base64-afbeeldingen bevatten; inventariseer en ruim die op. Stel een bewaartermijn, verwijderfunctie en back-upbeleid vast vóór klantenmigratie. Zet geen productielink in betaalmails tot dit is geregeld.
+- `OPENAI_API_KEY` — de API-sleutel van OpenAI (platform.openai.com → API keys).
+- `BOT_MODEL` — optioneel. Standaard `gpt-5.6-sol`. Alleen invullen als je een ander OpenAI-model wilt.
+- `SUPABASE_URL` en `SUPABASE_SERVICE_ROLE_KEY` — voor de toegangscontrole (tabel `codes`).
+- `BOT_SESSION_SECRET` — minimaal 32 willekeurige tekens.
 
-De coach gebruikt Anthropic Messages. Een bestaande `BOT_MODEL` voor OpenAI wordt bewust genegeerd. Controleer de Claude-aansluiting met een neutraal testbericht na uitrol. Lokale contracttests: `node --test tests/claude.test.js`.
+Zet nooit een service-role-key of API-sleutel in de frontend. `ANTHROPIC_API_KEY` en `BOT_CLAUDE_MODEL` worden niet meer gebruikt en mogen weg.
+
+## Privacy-opzet (dataminimalisatie)
+
+- **Gespreksinhoud wordt nergens opgeslagen.** Gesprekken bestaan alleen in het geopende tabblad en verdwijnen bij uitloggen, automatisch uitloggen of sluiten van het tabblad. Er is geen server-route meer om gesprekken op te slaan.
+- **Geen bewaring bij OpenAI voor latere opvraging:** elke aanroep gebruikt `store: false`. Gegevens via de API worden door OpenAI standaard niet gebruikt voor training. Sluit de verwerkersovereenkomst (DPA) van OpenAI af en controleer de actuele bewaartermijnen voor misbruikmonitoring in het OpenAI-dashboard.
+- **Geen inhoud in logs:** bij fouten logt de server alleen een statuscode en fouttype, nooit tekst of afbeeldingen.
+- **Wat je wél verwerkt:** e-mailadres, toegangscode, wachtwoord-hash en toegangsdatum (tabel `codes` en de gedeelde account-provider).
+- Screenshots gaan alleen mee met de AI-aanroep en worden niet opgeslagen.
+
+## Eenmalig: oude gesprekken wissen
+
+De vorige versie bewaarde gesprekken in de Supabase-tabel `chat`. Voer na de uitrol `supabase/remove-chat-history.sql` uit in de SQL Editor van het **bot**-project. Controleer daarna ook je Supabase-back-ups (die verlopen vanzelf volgens je Supabase-plan).
+
+## Testen na uitrol
+
+Ongeldige code; inloggen met e-mail; chat zonder login geeft 401; gesprek voeren met tekst en met een screenshot; uitloggen en opnieuw inloggen (gesprekken zijn dan weg); mobiel. Overweeg vóór brede uitrol een limiet op het aantal aanvragen (rate limit) voor inloggen en AI-gebruik.
+
+Lokale tests: `node --test tests/*.test.js tests/*.test.mjs`.

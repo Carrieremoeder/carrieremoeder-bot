@@ -1,6 +1,6 @@
 # Email accounts
 
-The bot uses the same Supabase Auth account provider as the dossier app. Only its public anon key is used for account actions. The existing bot Supabase project and its service key remain responsible for bot entitlements and conversations.
+The bot uses the same Supabase Auth account provider as the dossier app. Only its public anon key is used for account actions. The existing bot Supabase project and its service key remain responsible for bot entitlements. Conversations are not stored.
 
 ## Deployment
 

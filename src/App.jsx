@@ -161,20 +161,6 @@ export default function App() {
     };
   }, [loggedIn]);
   useEffect(() => {
-    if (!loggedIn) return;
-    let cancelled = false;
-    const generation = sessionGeneration.current;
-    api("conversations").then(data => {
-      if (cancelled || generation !== sessionGeneration.current || !tabSession.token()) return;
-      if (Array.isArray(data.conversations)) {
-        setConversations(data.conversations);
-        if (data.conversations.length) { setActiveId(data.conversations[0].id); setHistory(data.conversations[0].messages || []); }
-      }
-    }).catch(() => {});
-    return () => { cancelled = true; };
-  }, [loggedIn]);
-
-  useEffect(() => {
     const query = window.matchMedia("(max-width: 720px)");
     const updateMenu = () => setSidebarOpen(!query.matches);
     query.addEventListener("change", updateMenu);
@@ -192,7 +178,8 @@ export default function App() {
     else scrollRef.current?.scrollTo({ top: 0 });
   }, [history, loading]);
 
-  function saveConversations(convs) { if (!tabSession.token()) return; setConversations(convs); api("conversations", { method: "PUT", body: JSON.stringify({ conversations: convs }) }).catch(() => { if (tabSession.token()) alert("Gesprek opslaan is niet gelukt. Kopieer belangrijke tekst voordat je de pagina sluit."); }); }
+  // Privacy: gesprekken bestaan alleen in dit tabblad en worden nergens opgeslagen.
+  function saveConversations(convs) { if (!tabSession.token()) return; setConversations(convs); }
 
   function closeMobileMenu() { if (window.innerWidth <= 720) setSidebarOpen(false); }
 
@@ -207,7 +194,7 @@ export default function App() {
 
   function deleteConversation(id) {
     if (loading) return;
-    if (!window.confirm("Dit gesprek definitief uit de actieve database verwijderen?")) return;
+    if (!window.confirm("Dit gesprek nu wissen?")) return;
     const updated = conversations.filter(c => c.id !== id);
     saveConversations(updated);
     if (activeId === id) { setActiveId(updated[0]?.id || null); setHistory(updated[0]?.messages || []); }
@@ -315,6 +302,8 @@ export default function App() {
           {image && <img src={image} alt="bijlage" style={{ maxWidth: "180px", maxHeight: "120px", border: "1px solid #eee", display: "block", marginBottom: "8px", borderRadius: "4px" }} />}
           {isUser ? <span>{text}</span> : <div className="coach-answer" dangerouslySetInnerHTML={{ __html: md(typeof m.content === "string" ? m.content : text) }} />}
         </div>
+        {!isUser && !(loading && i === history.length - 1) && <button type="button" style={{ ...g.ghostBtn, marginTop: "6px", fontSize: "10px", padding: "4px 8px" }}
+          onClick={() => navigator.clipboard?.writeText(typeof m.content === "string" ? m.content : text).then(() => alert("Antwoord gekopieerd."), () => alert("Kopiëren lukt niet. Selecteer de tekst en kopieer handmatig."))}>Kopieer antwoord</button>}
       </div>
     );
   }
@@ -369,6 +358,7 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
         {sidebarOpen && <aside id="gesprekkenmenu" aria-label="Gesprekken" className="chat-sidebar" style={g.sidebar}>
           <button style={g.newBtn} disabled={loading} onClick={newConversation}>+ Nieuw gesprek</button>
           <div style={g.sideHeader}>Gesprekken</div>
+          <div style={{ padding: "0 16px 10px", fontSize: "11px", lineHeight: 1.5, color: C.muted }}>Gesprekken worden niet bewaard. Ze verdwijnen als je uitlogt of dit tabblad sluit. Kopieer wat je wilt houden.</div>
           {conversations.length === 0 && <div style={{ padding: "10px 16px", fontSize: "12px", color: C.muted }}>Nog geen gesprekken</div>}
           {conversations.map(conv => (
             <div key={conv.id} style={g.convItem(conv.id === activeId)}>
@@ -397,6 +387,7 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
               {history.length === 0 && <div className="welcome" style={g.emptyWrap}>
                 <h2 style={g.emptyH}>Welk bericht wil je bespreken?</h2>
                 <p style={g.emptyP}>Plak het bericht van je ex, voeg een screenshot toe of vertel wat er is gebeurd.</p>
+                <p style={{ ...g.emptyP, fontSize: "12px", marginTop: "8px" }}>Je gesprekken worden niet opgeslagen. Ze verdwijnen als je uitlogt of dit tabblad sluit.</p>
               </div>}
               {pendingImg && (
                 <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px", padding: "8px 12px", background: C.light, borderRadius: "6px" }}>
