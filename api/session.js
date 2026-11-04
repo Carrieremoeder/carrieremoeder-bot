@@ -54,7 +54,7 @@ export default async function handler(req, res) {
 
     return res.status(400).json({ error: 'Ongeldige aanvraag.' });
   } catch (error) {
-    console.error('Bot session:', { type: error?.name || 'error', status: error?.status || 0 });
+    console.error('Bot session:', { type: error?.name || 'error', status: error?.status || 0, detail: String(error?.detail || error?.message || '').slice(0, 300) });
     return res.status(503).json({ error: 'Inloggen lukt momenteel niet. Probeer het over een paar minuten opnieuw.' });
   }
 }
