@@ -7,4 +7,3 @@ compatibility_flags = ["nodejs_compat"]
 # BOT_SESSION_SECRET) staan als "Secret" in het Cloudflare-dashboard.
 [vars]
 SUPABASE_URL = "https://ejtfgvlaygrcthjihwoa.supabase.co"
-BOT_MODEL = "gpt-5.6-terra"  # TIJDELIJK: test met Terra

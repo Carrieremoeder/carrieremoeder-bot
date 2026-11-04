@@ -1,6 +1,6 @@
 import { readEvents } from '../lib/coachStream.js';
 import { BOT_INSTRUCTIES } from '../lib/botInstructions.js';
-import { requireCode, sameOrigin } from '../lib/security.js';
+import { db, requireCode, sameOrigin } from '../lib/security.js';
 
 // De coach draait op de OpenAI Responses API.
 // Privacy: `store: false` zorgt dat OpenAI het antwoord niet bewaart voor latere opvraging,
@@ -8,6 +8,25 @@ import { requireCode, sameOrigin } from '../lib/security.js';
 // OPENAI_BASE_URL is optioneel, bijvoorbeeld https://eu.api.openai.com voor EU-dataresidentie (als je OpenAI-project dat ondersteunt).
 const openaiUrl = () => `${(process.env.OPENAI_BASE_URL || 'https://api.openai.com').replace(/\/+$/, '')}/v1/responses`;
 const DEFAULT_MODEL = 'gpt-5.6-sol';
+const DEFAULT_LIGHT_MODEL = 'gpt-5.6-terra';
+const DEFAULT_DAILY_PREMIUM = 10;
+
+// Kiest het model: de eerste N berichten per dag het sterke model, daarna het lichtere.
+// Telt alleen aantallen per toegangscode per dag (geen inhoud). Lukt tellen niet, dan het lichtere model.
+async function chooseModel(code) {
+  const premium = process.env.BOT_MODEL || DEFAULT_MODEL;
+  const light = process.env.BOT_LIGHT_MODEL || DEFAULT_LIGHT_MODEL;
+  const limit = Number.parseInt(process.env.BOT_DAILY_PREMIUM ?? '', 10);
+  const daily = Number.isFinite(limit) && limit >= 0 ? limit : DEFAULT_DAILY_PREMIUM;
+  try {
+    const count = Number(await db('rpc/bot_increment_usage', { method: 'POST', data: { p_code: code } }));
+    if (!Number.isFinite(count)) throw new Error('Ongeldige teller');
+    return count <= daily ? { model: premium, light: false } : { model: light, light: true };
+  } catch (error) {
+    console.error('Bot usage:', { type: 'count_failed' });
+    return { model: light, light: true };
+  }
+}
 
 // Zet het berichtformaat van de app om naar het formaat van OpenAI.
 function toOpenAI(message) {
@@ -36,19 +55,21 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
   if (!sameOrigin(req)) return res.status(403).json({ error: 'Ongeldige aanvraag' });
   try {
-    if (!(await requireCode(req, res))) return;
+    const code = await requireCode(req, res);
+    if (!code) return;
     const messages = req.body?.messages;
     if (!Array.isArray(messages) || !messages.length || messages.length > 30 || JSON.stringify(messages).length > 7_000_000 || messages.some(m => !['user', 'assistant'].includes(m?.role))) return res.status(400).json({ error: 'Ongeldig gesprek' });
     let input;
     try { input = messages.map(toOpenAI); } catch { return res.status(400).json({ error: 'Ongeldige berichtinhoud of bestandstype.' }); }
     if (!process.env.OPENAI_API_KEY) return res.status(503).json({ error: 'AI is nog niet ingesteld.' });
     const streaming = req.body?.stream === true;
+    const { model, light } = await chooseModel(code);
     const response = await fetch(openaiUrl(), {
       method: 'POST',
       headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
       signal: AbortSignal.timeout(55_000),
       body: JSON.stringify({
-        model: process.env.BOT_MODEL || DEFAULT_MODEL,
+        model,
         instructions: BOT_INSTRUCTIES,
         input,
         max_output_tokens: 8000,
@@ -74,6 +95,7 @@ export default async function handler(req, res) {
       res.setHeader('X-Accel-Buffering', 'no');
       res.flushHeaders?.();
       const emit = event => res.write('data: ' + JSON.stringify(event) + '\n\n');
+      if (light) emit({ type: 'meta', light: true });
       let text = '';
       try {
         for await (const event of readEvents(response.body)) {
@@ -98,7 +120,7 @@ export default async function handler(req, res) {
     if (data?.status && data.status !== 'completed') return res.status(502).json({ error: 'De coach is tijdelijk niet beschikbaar.' });
     const text = outputText(data);
     if (!text.trim()) return res.status(502).json({ error: 'De coach is tijdelijk niet beschikbaar.' });
-    return res.status(200).json({ content: [{ text }] });
+    return res.status(200).json({ content: [{ text }], light });
   } catch (error) {
     console.error('Bot AI:', { type: error?.name === 'TimeoutError' ? 'timeout' : 'request_failed' });
     return res.status(500).json({ error: 'De coach is tijdelijk niet beschikbaar.' });

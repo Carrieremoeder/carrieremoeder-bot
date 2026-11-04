@@ -19,7 +19,11 @@ Zet deze als **Secret** (versleuteld):
 
 Optioneel:
 
-- `BOT_MODEL`: standaard `gpt-5.6-sol`.
+- `BOT_MODEL`: het sterke model, standaard `gpt-5.6-sol`.
+- `BOT_LIGHT_MODEL`: het lichtere model na het dagmaximum, standaard `gpt-5.6-terra`.
+- `BOT_DAILY_PREMIUM`: aantal berichten per gebruiker per dag met het sterke model, standaard `10`.
+
+Let op: omdat er een `wrangler.toml` is, worden gewone tekstvariabelen uit het dashboard genegeerd. Zet niet-geheime instellingen onder `[vars]` in `wrangler.toml`; geheime sleutels als Secret in het dashboard.
 - `OPENAI_BASE_URL`: bijvoorbeeld `https://eu.api.openai.com` voor EU-dataresidentie, alleen als je OpenAI-project dat ondersteunt.
 
 Zet nooit een service-role-key of API-sleutel in de frontend.
@@ -32,6 +36,10 @@ Zet nooit een service-role-key of API-sleutel in de frontend.
 - **Wat je wél verwerkt:** e-mailadres, toegangscode, wachtwoord-hash en toegangsdatum (tabel `codes` en de gedeelde account-provider).
 - Afbeeldingen (screenshots) worden niet geaccepteerd: alleen tekst, zodat klanten zelf namen en details kunnen weghalen.
 - Cloudflare is verwerker voor de hosting. Neem Cloudflare op in je verwerkersoverzicht.
+
+## Eenmalig: dagteller aanmaken
+
+Voer `supabase/bot-usage.sql` uit in de SQL Editor van het **bot**-project. De tabel `bot_usage` bevat alleen toegangscode, datum en aantal (geen inhoud) en wordt na 2 dagen automatisch opgeschoond.
 
 ## Eenmalig: oude gesprekken wissen
 

@@ -16,6 +16,7 @@ test('OpenAI coach contract and authentication', async t => {
   async function run(messages, options = {}) {
     calls = [];
     globalThis.fetch = async (url, init) => {
+      if (url.includes('/rpc/bot_increment_usage')) return new Response(String(options.usage ?? 1));
       if (url.startsWith(process.env.SUPABASE_URL)) return new Response(JSON.stringify([{ code: 'TEST-CODE' }]));
       calls.push({ url, ...init, body: JSON.parse(init.body) });
       if (upstream instanceof Error) throw upstream;
@@ -32,10 +33,22 @@ test('OpenAI coach contract and authentication', async t => {
     assert.equal(calls[0].url, 'https://api.openai.com/v1/responses');
     assert.equal(calls[0].headers.Authorization, 'Bearer test-only');
     assert.equal(calls[0].body.model, 'gpt-5.6-sol');
+    assert.equal(res.data.light, false);
     assert.equal(calls[0].body.store, false);
     assert.ok(calls[0].body.instructions.length > 100);
     assert.equal(calls[0].body.input[1].content, 'Hallo');
     assert.equal(calls[0].body.input[2].content[0].type, 'input_text');
+  });
+  await t.test('after the daily premium limit the lighter model is used', async () => {
+    let res = await run([{ role: 'user', content: 'Hoi' }], { usage: 10 });
+    assert.equal(calls[0].body.model, 'gpt-5.6-sol');
+    res = await run([{ role: 'user', content: 'Hoi' }], { usage: 11 });
+    assert.equal(calls[0].body.model, 'gpt-5.6-terra');
+    assert.equal(res.data.light, true);
+    process.env.BOT_DAILY_PREMIUM = '3';
+    await run([{ role: 'user', content: 'Hoi' }], { usage: 4 });
+    assert.equal(calls[0].body.model, 'gpt-5.6-terra');
+    delete process.env.BOT_DAILY_PREMIUM;
   });
   await t.test('unauthenticated and cross-origin requests never reach AI', async () => {
     assert.equal((await run([{ role: 'user', content: 'Hoi' }], { anonymous: true })).code, 401);

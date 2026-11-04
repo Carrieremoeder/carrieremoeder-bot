@@ -105,6 +105,7 @@ export default function App() {
   const [pendingImg, setPendingImg] = useState(null);
   const [uploadingImg, setUploadingImg] = useState(false);
   const [sessionNotice, setSessionNotice] = useState("");
+  const [lightMode, setLightMode] = useState(false);
   const [idleSeconds, setIdleSeconds] = useState(null);
   const sessionGeneration = useRef(0);
   const chatController = useRef(null);
@@ -120,7 +121,7 @@ export default function App() {
       chatController.current?.abort();
       imageReader.current?.abort();
       setLoggedIn(false); setHistory([]); setConversations([]); setActiveId(null);
-      setInput(""); setPendingImg(null); setChatError(""); setLoading(false); setUploadingImg(false); setIdleSeconds(null);
+      setInput(""); setPendingImg(null); setChatError(""); setLoading(false); setUploadingImg(false); setIdleSeconds(null); setLightMode(false);
       setSessionNotice(reason === 'idle' ? 'Je bent automatisch uitgelogd na 30 minuten zonder activiteit. Log opnieuw in om verder te gaan.' : reason === 'expired' ? 'Je sessie is verlopen. Log opnieuw in om verder te gaan.' : '');
     });
     let cancelled = false;
@@ -267,7 +268,7 @@ export default function App() {
       const reply = await readCoachReply(res, text => {
         if (generation !== sessionGeneration.current || !tabSession.token()) return;
         setHistory([...nh, { role: "assistant", content: text }]);
-      });
+      }, meta => { if (meta?.light && generation === sessionGeneration.current) setLightMode(true); });
       if (generation !== sessionGeneration.current || !tabSession.token()) return;
       const newHistory = [...nh, { role: "assistant", content: reply }];
       setHistory(newHistory);
@@ -418,6 +419,7 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
                 ))}</div>
                 <p style={{ ...g.emptyP, fontSize: "12px", marginTop: "8px" }}>Je gesprekken worden niet opgeslagen. Ze verdwijnen als je uitlogt of dit tabblad sluit. Je kunt een gesprek wel zelf downloaden.</p>
               </div>}
+              {lightMode && <p role="status" style={{ fontSize: "12px", color: K.kleur.tekstZacht, lineHeight: 1.5, margin: "0 0 8px" }}>Je hebt vandaag je berichten met de uitgebreide coach gebruikt. De coach helpt je verder in een lichtere versie. Morgen staat de uitgebreide coach weer voor je klaar.</p>}
               {chatError && <p role="alert" style={g.err}>{chatError} Je bericht staat nog klaar om opnieuw te versturen.</p>}
               <textarea aria-label="Jouw bericht" ref={taRef} style={{ ...g.chatTa, ...(history.length === 0 ? { minHeight: "110px" } : {}) }} value={input}
                 onChange={e => { setInput(e.target.value); if (taRef.current) { taRef.current.style.height = "auto"; taRef.current.style.height = Math.min(taRef.current.scrollHeight, 120) + "px"; } }}
