@@ -283,6 +283,34 @@ export default function App() {
   }
 
   function logout() { tabSession.clear(); api("session", { method: "DELETE" }).catch(() => {}); }
+  // Privacy: het bestand wordt in de browser gemaakt en direct op het apparaat van de gebruiker opgeslagen.
+  function downloadConversation() {
+    if (!history.length || loading) return;
+    const now = new Date();
+    const plain = text => String(text || "").replace(/\*\*(.+?)\*\*/g, "$1").replace(/^#{1,6}\s+/gm, "").trim();
+    const lines = [
+      "Always In Control Bot – Meester Masha",
+      "Gesprek van " + now.toLocaleDateString("nl-NL") + " om " + now.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" }),
+      "",
+      "Dit bestand staat alleen op je eigen apparaat. Bewaar het op een veilige plek waar je ex of kinderen niet bij kunnen.",
+      "Deze coaching is geen juridisch advies.",
+      "",
+      "────────────────────────────────────────",
+      ""
+    ];
+    for (const m of history) {
+      const display = m.display || m.content;
+      const text = m.role === "user" ? (typeof display === "string" ? display : display?.text || "") : (typeof m.content === "string" ? m.content : "");
+      lines.push(m.role === "user" ? "JIJ:" : "ALWAYS IN CONTROL BOT:", plain(text), "");
+    }
+    const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "gesprek-always-in-control-bot-" + now.toISOString().slice(0, 10) + ".txt";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
 
   function renderMessage(m, i) {
     const display = m.display || m.content;
@@ -353,7 +381,7 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
         {sidebarOpen && <aside id="gesprekkenmenu" aria-label="Gesprekken" className="chat-sidebar" style={g.sidebar}>
           <button style={g.newBtn} disabled={loading} onClick={newConversation}>+ Nieuw gesprek</button>
           <div style={g.sideHeader}>Gesprekken</div>
-          <div style={{ padding: "0 16px 10px", fontSize: "11px", lineHeight: 1.5, color: C.muted }}>Gesprekken worden niet bewaard. Ze verdwijnen als je uitlogt of dit tabblad sluit. Kopieer wat je wilt houden.</div>
+          <div style={{ padding: "0 16px 10px", fontSize: "11px", lineHeight: 1.5, color: C.muted }}>Gesprekken worden niet bewaard. Ze verdwijnen als je uitlogt of dit tabblad sluit. Wil je een gesprek houden? Kies "Gesprek downloaden".</div>
           {conversations.length === 0 && <div style={{ padding: "10px 16px", fontSize: "12px", color: C.muted }}>Nog geen gesprekken</div>}
           {conversations.map(conv => (
             <div key={conv.id} style={g.convItem(conv.id === activeId)}>
@@ -388,14 +416,15 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
                     <span style={g.quickDetail}>{q.detail}</span>
                   </button>
                 ))}</div>
-                <p style={{ ...g.emptyP, fontSize: "12px", marginTop: "8px" }}>Je gesprekken worden niet opgeslagen. Ze verdwijnen als je uitlogt of dit tabblad sluit.</p>
+                <p style={{ ...g.emptyP, fontSize: "12px", marginTop: "8px" }}>Je gesprekken worden niet opgeslagen. Ze verdwijnen als je uitlogt of dit tabblad sluit. Je kunt een gesprek wel zelf downloaden.</p>
               </div>}
               {chatError && <p role="alert" style={g.err}>{chatError} Je bericht staat nog klaar om opnieuw te versturen.</p>}
               <textarea aria-label="Jouw bericht" ref={taRef} style={{ ...g.chatTa, ...(history.length === 0 ? { minHeight: "110px" } : {}) }} value={input}
                 onChange={e => { setInput(e.target.value); if (taRef.current) { taRef.current.style.height = "auto"; taRef.current.style.height = Math.min(taRef.current.scrollHeight, 120) + "px"; } }}
                 onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
                 placeholder="Plak hier het bericht van je ex, of beschrijf de situatie..." rows={1} />
-              <div style={g.inputRow}>
+              <div style={{ ...g.inputRow, justifyContent: history.length ? "space-between" : "flex-end" }}>
+                {history.length > 0 && <button type="button" style={g.attachBtn(false)} onClick={downloadConversation} disabled={loading} title="Sla dit gesprek op als bestand op je eigen apparaat">↓ Gesprek downloaden</button>}
                 <button aria-label="Bericht versturen" style={g.sendBtn(loading || (!input.trim() && !pendingImg))} onClick={send} disabled={loading || (!input.trim() && !pendingImg)}>Versturen →</button>
               </div>
               <div className="composer-hints" style={{ display: "flex", justifyContent: "space-between", gap: "18px", marginTop: "10px", lineHeight: 1.6 }}>
