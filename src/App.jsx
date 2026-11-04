@@ -69,6 +69,10 @@ const g = {
   emptyWrap: { padding: "0 0 20px", maxWidth: "740px", margin: "0 auto" },
   emptyH: { ...K.serifKop("40px"), margin: "0 0 12px" },
   emptyP: { fontSize: "14px", color: K.kleur.tekstZacht, lineHeight: 1.65, margin: 0, maxWidth: "540px" },
+  quickBtns: { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "12px", margin: "20px 0 6px" },
+  quickBtn: { display: "flex", flexDirection: "column", alignItems: "flex-start", textAlign: "left", padding: "18px 16px", background: C.white, border: `1px solid ${C.border}`, color: C.dark, cursor: "pointer", fontFamily: K.font.sans },
+  quickTitle: { fontSize: "14px", fontWeight: 600, lineHeight: 1.35 },
+  quickDetail: { fontSize: "12px", color: K.kleur.tekstZacht, lineHeight: 1.5, margin: "6px 0 0" },
 };
 function BrandHeader({ loggedIn = false, loading = false, sidebarOpen, onMenu, onLogout }) {
   return <header style={g.hdr} className="hdr-bar">
@@ -81,6 +85,13 @@ function BrandHeader({ loggedIn = false, loading = false, sidebarOpen, onMenu, o
     {loggedIn && <button style={g.ghostBtn} onClick={onLogout} disabled={loading}>Uitloggen</button>}
   </header>;
 }
+
+const QUICK_CHOICES = [
+  { title: "Ik heb een bericht van mijn ex ontvangen", detail: "Plak het bericht of voeg een screenshot toe. We kijken rustig naar wat er staat.", draft: "Ik heb dit bericht van mijn ex ontvangen: " },
+  { title: "Ik wil zelf een bericht aan mijn ex sturen", detail: "Vind woorden die duidelijk zijn en bij jouw grenzen passen.", draft: "Ik wil zelf een bericht aan mijn ex sturen. Dit wil ik duidelijk maken: " },
+  { title: "Ik wil een gesprek voorbereiden", detail: "Bereid een gesprek met je ex voor, zodat je rustig en met regie het gesprek ingaat.", draft: "Ik wil een gesprek met mijn ex voorbereiden. Het gesprek gaat over: " },
+  { title: "Ik wil eerst even tot rust komen", detail: "Neem een moment voor jezelf voordat je beslist wat je doet.", draft: "Ik merk dat contact met mijn ex me raakt. Help me eerst even tot rust te komen." }
+];
 
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -313,6 +324,7 @@ ${K.TOKENS_CSS}
 .hdr-brand{max-width:100%}.brand-logo{max-width:100%;object-fit:contain}.coach-answer{min-width:0;max-width:100%;overflow-wrap:anywhere}
 button,textarea,input{font:inherit}button:disabled{cursor:default;opacity:.5}
 button:not(:disabled):hover{background:var(--accent-vlak)}
+.quick-card{transition:border-color .18s}.quick-card:hover{border-color:var(--accent-rand)!important}
 button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:var(--rand-structuur)}
 @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}
@@ -325,7 +337,7 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
 .chat-sidebar{position:absolute;inset:0 auto 0 0;z-index:20;width:min(280px,85vw)!important;min-width:0!important}
 .menu-backdrop{display:block;position:absolute;inset:0;background:rgba(28,20,16,.22);border:0;z-index:19}
 .chat-messages{padding:24px 18px!important}.welcome{padding:0 0 18px!important}
-.welcome h2{font-size:34px!important}
+.welcome h2{font-size:34px!important}.quick-choices{grid-template-columns:1fr!important;gap:8px!important}.quick-card{padding:14px!important}
 .composer{padding:14px max(14px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))!important}input,textarea,select{font-size:16px!important}
 .composer button{flex-shrink:0}.composer-hints>span{min-width:0;overflow-wrap:anywhere}
 .composer-hints{flex-direction:column;gap:5px}.keyboard-hint{display:none}
@@ -384,8 +396,14 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
           <div style={{ ...g.inputBarOuter, ...(history.length === 0 ? { borderTop: "none", overflowY: "auto", flex: 1, paddingTop: "28px" } : {}) }}>
             <div className="composer" style={g.inputBar}>
               {history.length === 0 && <div className="welcome" style={g.emptyWrap}>
-                <h2 style={g.emptyH}>Welk bericht wil je bespreken?</h2>
-                <p style={g.emptyP}>Plak het bericht van je ex, voeg een screenshot toe of vertel wat er is gebeurd.</p>
+                <h2 style={g.emptyH}>Wat houdt je nu bezig?</h2>
+                <p style={g.emptyP}>Kies waar je mee aan de slag wilt, of typ direct je situatie in het tekstvak.</p>
+                <div className="quick-choices" style={g.quickBtns}>{QUICK_CHOICES.map(q => (
+                  <button type="button" className="quick-card" key={q.title} style={g.quickBtn} onClick={() => { setInput(q.draft); setTimeout(() => { const t = taRef.current; if (t) { t.focus(); t.setSelectionRange(q.draft.length, q.draft.length); t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 120) + "px"; } }, 0); }}>
+                    <span style={g.quickTitle}>{q.title}</span>
+                    <span style={g.quickDetail}>{q.detail}</span>
+                  </button>
+                ))}</div>
                 <p style={{ ...g.emptyP, fontSize: "12px", marginTop: "8px" }}>Je gesprekken worden niet opgeslagen. Ze verdwijnen als je uitlogt of dit tabblad sluit.</p>
               </div>}
               {pendingImg && (
