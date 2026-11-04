@@ -5,7 +5,8 @@ import { requireCode, sameOrigin } from '../lib/security.js';
 // De coach draait op de OpenAI Responses API.
 // Privacy: `store: false` zorgt dat OpenAI het antwoord niet bewaart voor latere opvraging,
 // en deze server slaat zelf geen gespreksinhoud op en logt die ook niet.
-const OPENAI_URL = 'https://api.openai.com/v1/responses';
+// OPENAI_BASE_URL is optioneel, bijvoorbeeld https://eu.api.openai.com voor EU-dataresidentie (als je OpenAI-project dat ondersteunt).
+const openaiUrl = () => `${(process.env.OPENAI_BASE_URL || 'https://api.openai.com').replace(/\/+$/, '')}/v1/responses`;
 const DEFAULT_MODEL = 'gpt-5.6-sol';
 const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 
@@ -44,7 +45,7 @@ export default async function handler(req, res) {
     try { input = messages.map(toOpenAI); } catch { return res.status(400).json({ error: 'Ongeldige berichtinhoud of bestandstype.' }); }
     if (!process.env.OPENAI_API_KEY) return res.status(503).json({ error: 'AI is nog niet ingesteld.' });
     const streaming = req.body?.stream === true;
-    const response = await fetch(OPENAI_URL, {
+    const response = await fetch(openaiUrl(), {
       method: 'POST',
       headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
       signal: AbortSignal.timeout(55_000),

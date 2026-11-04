@@ -68,7 +68,7 @@ export default function EmailLogin({ api, onLogin, notice, styles: g }) {
     {step === 'signup' && <p style={{ fontSize: '12px', lineHeight: 1.6, color: K.kleur.tekstMeta }}>Heb je al een account voor de dossierapp? Dan kun je met dat e-mailadres en wachtwoord inloggen.</p>}
     {step === 'forgot' && <><h2 style={{ ...K.serifKop('26px'), margin: '0 0 10px' }}>Wachtwoord vergeten?</h2><p style={panel}>Vul je e-mailadres in. Je ontvangt een link waarmee je een nieuw wachtwoord kunt kiezen.</p></>}
     {step === 'reset' && <h2 style={{ ...K.serifKop('26px'), margin: '0 0 20px' }}>Nieuw wachtwoord instellen</h2>}
-    {(step === 'forgot' || step === 'reset') && <p style={{ fontSize: '12px', lineHeight: 1.6, color: K.kleur.tekstMeta }}>Je wijzigt het wachtwoord van je Carrièremoeder-account. Gebruik je ook de dossierapp? Dan geldt het nieuwe wachtwoord daar ook.</p>}
+    {(step === 'forgot' || step === 'reset') && <p style={{ fontSize: '12px', lineHeight: 1.6, color: K.kleur.tekstMeta }}>Je wijzigt het wachtwoord van je Carrieremoeder-account. Gebruik je ook de dossierapp? Dan geldt het nieuwe wachtwoord daar ook.</p>}
     {step !== 'sent' && <form onSubmit={submit}>
       {step !== 'reset' && step !== 'confirm' && <div style={g.fldGrp}>
         <label htmlFor="login-email" style={g.lbl}>E-mailadres</label>
