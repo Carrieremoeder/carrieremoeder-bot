@@ -1,5 +1,5 @@
 import { clearSession, createLoginToken, issuedAtOfLink, readLoginToken, requireCode, sameOrigin, setSession } from '../lib/security.js';
-import { currentLoginField, findContact, getContact, hasAccess, normaliseEmail, sendLoginLink } from '../lib/systeme.js';
+import { currentLoginField, ensureLoginField, ensureLoginTag, findContact, getContact, hasAccess, normaliseEmail, sendLoginLink } from '../lib/systeme.js';
 
 const RESEND_COOLDOWN_MS = 60 * 1000;
 const SENT_MESSAGE = 'Als dit e-mailadres toegang heeft tot de Bot, ontvang je binnen een paar minuten een inloglink. Controleer ook je spammap. Geen mail ontvangen? Gebruik het e-mailadres waarmee je de Bot hebt gekocht.';
@@ -31,6 +31,9 @@ export default async function handler(req, res) {
     if (action === 'request-link') {
       const email = normaliseEmail(req.body?.email);
       if (!email) return res.status(400).json({ error: 'Vul een geldig e-mailadres in.' });
+      // Zorgt dat het veld en de tag in Systeme.io bestaan (eenmalig), zodat de automatisering ze kan gebruiken.
+      await ensureLoginField();
+      await ensureLoginTag();
       const contact = await findContact(email);
       if (contact && hasAccess(contact)) {
         const recentlySent = Date.now() - issuedAtOfLink(currentLoginField(contact)) < RESEND_COOLDOWN_MS;

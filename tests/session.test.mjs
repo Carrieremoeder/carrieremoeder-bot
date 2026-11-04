@@ -83,6 +83,7 @@ test('login via Systeme.io: link only for tagged contacts, no passwords, session
     'geen@example.com': { id: 202, email: 'geen@example.com', tags: [{ id: 9, name: 'nieuwsbrief' }], fields: [] },
   };
   let calls = [];
+  let tagExists = false, fieldExists = false;
   globalThis.fetch = async (url, init = {}) => {
     calls.push({ url, method: init.method || 'GET', body: init.body ? JSON.parse(init.body) : undefined, headers: init.headers });
     const u = new URL(url);
@@ -90,7 +91,10 @@ test('login via Systeme.io: link only for tagged contacts, no passwords, session
       const c = contacts[u.searchParams.get('email')];
       return Response.json({ items: c ? [c] : [] });
     }
-    if (u.pathname === '/api/tags') return Response.json({ items: [{ id: 55, name: 'bot-inloglink' }] });
+    if (u.pathname === '/api/tags' && (init.method || 'GET') === 'GET') return Response.json({ items: tagExists ? [{ id: 55, name: 'bot-inloglink' }] : [] });
+    if (u.pathname === '/api/tags' && init.method === 'POST') { tagExists = true; return Response.json({ id: 55, name: 'bot-inloglink' }); }
+    if (u.pathname === '/api/contact_fields' && (init.method || 'GET') === 'GET') return Response.json({ items: fieldExists ? [{ slug: 'bot_inloglink' }] : [] });
+    if (u.pathname === '/api/contact_fields' && init.method === 'POST') { fieldExists = true; return Response.json({ slug: 'bot_inloglink' }); }
     const m = /^\/api\/contacts\/(\d+)$/.exec(u.pathname);
     if (m && (init.method || 'GET') === 'GET') { const c = Object.values(contacts).find(x => String(x.id) === m[1]); return c ? Response.json(c) : new Response('', { status: 404 }); }
     if (m && init.method === 'PATCH') return Response.json({});
@@ -116,13 +120,15 @@ test('login via Systeme.io: link only for tagged contacts, no passwords, session
   assert.match(link, /^https:\/\/bot\.example\/\?login=/);
   assert.ok(calls.some(c => c.method === 'POST' && c.url.endsWith('/contacts/101/tags') && c.body.tagId === 55));
   assert.ok(!JSON.stringify(calls).toLowerCase().includes('password'));
+  assert.ok(calls.some(c => c.method === 'POST' && c.url.endsWith('/api/contact_fields') && c.body.slug === 'bot_inloglink'), 'field is created when missing');
+  assert.ok(calls.some(c => c.method === 'POST' && c.url.endsWith('/api/tags') && c.body.name === 'bot-inloglink'), 'tag is created when missing');
   // Zonder tag of onbekend: zelfde antwoord, maar geen mail.
   for (const email of ['geen@example.com', 'onbekend@example.com']) {
     calls = [];
     const other = await call({ action: 'request-link', email });
     assert.equal(other.code, 200);
     assert.equal(other.data.message, res.data.message);
-    assert.ok(!calls.some(c => c.method !== 'GET'));
+    assert.ok(!calls.some(c => c.method === 'PATCH' || c.url.includes('/contacts/')), 'no login link for contacts without access');
   }
   // Binnen een minuut opnieuw aanvragen stuurt geen tweede mail.
   contacts['klant@example.com'].fields = [{ slug: 'bot_inloglink', value: link }];
