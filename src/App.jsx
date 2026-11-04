@@ -285,6 +285,36 @@ export default function App() {
 
   function logout() { tabSession.clear(); api("session", { method: "DELETE" }).catch(() => {}); }
   // Privacy: het bestand wordt in de browser gemaakt en direct op het apparaat van de gebruiker opgeslagen.
+  // Privacy: het bestand wordt alleen in de browser gelezen; er gaat niets naar de server tot de gebruiker verder praat.
+  function importConversation(file) {
+    if (!file || loading) return;
+    if (file.size > 300_000) { alert("Dit bestand is te groot. Kies een gesprek dat je uit de Bot hebt gedownload."); return; }
+    const reader = new FileReader();
+    const generation = sessionGeneration.current;
+    reader.onload = e => {
+      if (generation !== sessionGeneration.current || !tabSession.token()) return;
+      const text = String(e.target.result || "").replace(/\r\n/g, "\n");
+      const sep = text.indexOf("────");
+      if (!text.startsWith("Always In Control Bot") || sep < 0) { alert("Dit bestand wordt niet herkend. Kies een gesprek dat je met 'Gesprek downloaden' uit de Bot hebt opgeslagen."); return; }
+      const msgs = [];
+      let current = null;
+      for (const line of text.slice(sep).split("\n").slice(1)) {
+        if (line === "JIJ:" || line === "ALWAYS IN CONTROL BOT:") {
+          if (current && current.content.trim()) msgs.push({ ...current, content: current.content.trim() });
+          current = { role: line === "JIJ:" ? "user" : "assistant", content: "" };
+        } else if (current) current.content += line + "\n";
+      }
+      if (current && current.content.trim()) msgs.push({ ...current, content: current.content.trim() });
+      const restored = msgs.slice(-60).map(m => m.role === "user" ? { role: "user", content: m.content.slice(0, 20000), display: m.content.slice(0, 20000) } : { role: "assistant", content: m.content.slice(0, 20000) });
+      if (!restored.length) { alert("Er staan geen berichten in dit bestand."); return; }
+      const id = Date.now();
+      const first = restored.find(m => m.role === "user")?.content || "Eerder gesprek";
+      const conv = { id, title: "Vervolg: " + first.slice(0, 35) + (first.length > 35 ? "..." : ""), date: new Date().toLocaleDateString("nl-NL"), messages: restored };
+      saveConversations([conv, ...conversations]); setActiveId(id); setHistory(restored); closeMobileMenu();
+    };
+    reader.readAsText(file, "utf-8");
+  }
+
   function downloadConversation() {
     if (!history.length || loading) return;
     const now = new Date();
@@ -417,6 +447,11 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
                     <span style={g.quickDetail}>{q.detail}</span>
                   </button>
                 ))}</div>
+                <input ref={fileRef} type="file" accept=".txt,text/plain" style={{ display: "none" }} onChange={e => { importConversation(e.target.files?.[0]); e.target.value = ""; }} />
+                <p style={{ ...g.emptyP, fontSize: "12px", marginTop: "4px" }}>
+                  <button type="button" onClick={() => fileRef.current?.click()} style={{ background: "none", border: "none", padding: 0, color: C.dark, textDecoration: "underline", textUnderlineOffset: "3px", cursor: "pointer", fontSize: "12px" }}>Verder met een eerder gesprek</button>
+                  {" "}· kies een gesprek dat je eerder hebt gedownload. Het bestand wordt alleen op je eigen apparaat gelezen.
+                </p>
                 <p style={{ ...g.emptyP, fontSize: "12px", marginTop: "8px" }}>Je gesprekken worden niet opgeslagen. Ze verdwijnen als je uitlogt of dit tabblad sluit. Je kunt een gesprek wel zelf downloaden.</p>
               </div>}
               {lightMode && <p role="status" style={{ fontSize: "12px", color: K.kleur.tekstZacht, lineHeight: 1.5, margin: "0 0 8px" }}>Je hebt vandaag je berichten met de uitgebreide coach gebruikt. De coach helpt je verder in een lichtere versie. Morgen staat de uitgebreide coach weer voor je klaar.</p>}
