@@ -8,7 +8,6 @@ import { requireCode, sameOrigin } from '../lib/security.js';
 // OPENAI_BASE_URL is optioneel, bijvoorbeeld https://eu.api.openai.com voor EU-dataresidentie (als je OpenAI-project dat ondersteunt).
 const openaiUrl = () => `${(process.env.OPENAI_BASE_URL || 'https://api.openai.com').replace(/\/+$/, '')}/v1/responses`;
 const DEFAULT_MODEL = 'gpt-5.6-sol';
-const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 
 // Zet het berichtformaat van de app om naar het formaat van OpenAI.
 function toOpenAI(message) {
@@ -16,8 +15,7 @@ function toOpenAI(message) {
   if (message.role !== 'user' || !Array.isArray(message.content)) throw new Error('Ongeldige berichtinhoud');
   const parts = message.content.map(part => {
     if (part?.type === 'text' && typeof part.text === 'string') return { type: 'input_text', text: part.text.slice(0, 20000) };
-    if (part?.type === 'image' && IMAGE_TYPES.includes(part.source?.media_type) && /^[A-Za-z0-9+/=]+$/.test(part.source?.data || ''))
-      return { type: 'input_image', image_url: `data:${part.source.media_type};base64,${part.source.data}` };
+    // Afbeeldingen worden bewust niet geaccepteerd (dataminimalisatie): alleen tekst.
     throw new Error('Bestandstype niet ondersteund');
   });
   return { role: 'user', content: parts };

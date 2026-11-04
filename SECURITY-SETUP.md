@@ -30,7 +30,7 @@ Zet nooit een service-role-key of API-sleutel in de frontend.
 - **OpenAI bewaart het antwoord niet voor latere opvraging:** elke aanroep gebruikt `store: false`. Gegevens via de API worden door OpenAI standaard niet gebruikt voor training. Sluit de verwerkersovereenkomst (DPA) van OpenAI af en controleer de actuele bewaartermijnen voor misbruikmonitoring in het OpenAI-dashboard.
 - **Geen inhoud in logs:** bij fouten logt de server alleen een statuscode en fouttype, nooit tekst of afbeeldingen.
 - **Wat je wél verwerkt:** e-mailadres, toegangscode, wachtwoord-hash en toegangsdatum (tabel `codes` en de gedeelde account-provider).
-- Screenshots gaan alleen mee met de AI-aanroep en worden niet opgeslagen.
+- Afbeeldingen (screenshots) worden niet geaccepteerd: alleen tekst, zodat klanten zelf namen en details kunnen weghalen.
 - Cloudflare is verwerker voor de hosting. Neem Cloudflare op in je verwerkersoverzicht.
 
 ## Eenmalig: oude gesprekken wissen
@@ -44,7 +44,7 @@ Test deze punten:
 - inloggen met een ongeldige code;
 - inloggen met e-mail;
 - chatten zonder login (geeft 401);
-- een gesprek met tekst en met een screenshot;
+- een gesprek met tekst;
 - uitloggen en opnieuw inloggen (de gesprekken zijn dan weg);
 - gebruik op mobiel.
 

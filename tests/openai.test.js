@@ -25,8 +25,8 @@ test('OpenAI coach contract and authentication', async t => {
     await handler({ method: 'POST', headers: { host: 'bot.example', origin: options.origin || 'https://bot.example', authorization: options.anonymous ? '' : `Bearer ${token}` }, body: { messages, stream: options.stream } }, res);
     return res;
   }
-  await t.test('text, history and images reach OpenAI with server instructions, without storage', async () => {
-    const res = await run([{ role: 'user', content: 'Hoi' }, { role: 'assistant', content: 'Hallo' }, { role: 'user', content: [{ type: 'image', source: { media_type: 'image/png', data: 'YWJj' } }, { type: 'text', text: 'Help' }] }]);
+  await t.test('text and history reach OpenAI with server instructions, without storage', async () => {
+    const res = await run([{ role: 'user', content: 'Hoi' }, { role: 'assistant', content: 'Hallo' }, { role: 'user', content: [{ type: 'text', text: 'Help' }] }]);
     assert.equal(res.code, 200);
     assert.equal(res.data.content[0].text, 'Ik help je.');
     assert.equal(calls[0].url, 'https://api.openai.com/v1/responses');
@@ -35,9 +35,7 @@ test('OpenAI coach contract and authentication', async t => {
     assert.equal(calls[0].body.store, false);
     assert.ok(calls[0].body.instructions.length > 100);
     assert.equal(calls[0].body.input[1].content, 'Hallo');
-    assert.equal(calls[0].body.input[2].content[0].type, 'input_image');
-    assert.equal(calls[0].body.input[2].content[0].image_url, 'data:image/png;base64,YWJj');
-    assert.equal(calls[0].body.input[2].content[1].type, 'input_text');
+    assert.equal(calls[0].body.input[2].content[0].type, 'input_text');
   });
   await t.test('unauthenticated and cross-origin requests never reach AI', async () => {
     assert.equal((await run([{ role: 'user', content: 'Hoi' }], { anonymous: true })).code, 401);
@@ -46,7 +44,7 @@ test('OpenAI coach contract and authentication', async t => {
     assert.equal(calls.length, 0);
   });
   await t.test('invalid content rejected before AI call', async () => {
-    for (const content of [[null], [{ type: 'image', source: { media_type: 'text/html', data: 'YWJj' } }], {}]) {
+    for (const content of [[null], [{ type: 'image', source: { media_type: 'image/png', data: 'YWJj' } }], [{ type: 'image', source: { media_type: 'text/html', data: 'YWJj' } }], {}]) {
       assert.equal((await run([{ role: 'user', content }])).code, 400);
       assert.equal(calls.length, 0);
     }

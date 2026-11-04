@@ -61,7 +61,7 @@ export default function EmailLogin({ api, onLogin, notice, styles: g }) {
   const panel = { background: K.kleur.kaartZacht, border: `1px solid ${K.kleur.randVeld}`, padding: '12px 14px', marginBottom: '20px', fontSize: '13px', lineHeight: 1.65, color: K.kleur.tekstZacht };
   return <div style={{ ...g.loginWrap, margin: '40px auto' }}>
     <h1 style={g.loginH}>Always In Control Bot</h1>
-    <p style={{ ...g.loginP, marginBottom: '24px' }}>Een lastig bericht van je ex ontvangen? Plak het bericht, voeg een screenshot toe of vertel wat er speelt. De bot helpt je begrijpen wat er gebeurt, afwegen of je wilt reageren en een rustige, duidelijke reactie formuleren.</p>
+    <p style={{ ...g.loginP, marginBottom: '24px' }}>Een lastig bericht van je ex ontvangen? Plak het bericht of vertel wat er speelt. De bot helpt je begrijpen wat er gebeurt, afwegen of je wilt reageren en een rustige, duidelijke reactie formuleren.</p>
     {notice && <p role="status" style={panel}>{notice}</p>}
     {message && <p role="status" style={panel}>{message}</p>}
     {step === 'signup' && <p style={panel}>Gebruik hetzelfde e-mailadres waarmee je Always In Control Bot hebt gekocht. Kies een persoonlijk wachtwoord en bevestig je e-mailadres. Een account aanmaken sluit geen abonnement af.</p>}
