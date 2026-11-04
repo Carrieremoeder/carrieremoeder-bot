@@ -79,7 +79,7 @@ test('login via Systeme.io: link only for tagged contacts, no passwords, session
   const originalFetch = globalThis.fetch;
   t.after(() => { globalThis.fetch = originalFetch; });
   const contacts = {
-    'klant@example.com': { id: 101, email: 'klant@example.com', tags: [{ id: 1, name: 'Training + Bot' }], fields: [] },
+    'klant@example.com': { id: 101, email: 'klant@example.com', tags: [{ id: 1, name: 'always in control bot + training' }], fields: [] },
     'geen@example.com': { id: 202, email: 'geen@example.com', tags: [{ id: 9, name: 'nieuwsbrief' }], fields: [] },
   };
   let calls = [];
