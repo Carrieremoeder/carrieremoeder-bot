@@ -1,61 +1,41 @@
-# Hosting, veilige toegang en privacy
+# Hosting, inloggen en privacy
 
 ## Hosting: Cloudflare Pages
 
-De app draait op Cloudflare Pages (gratis abonnement; zakelijk gebruik is toegestaan).
+- Build command: `npm run build` · Build output directory: `dist`
+- Serverroutes: `functions/api/[[route]].js` (koppeling naar `api/chat.js` en `api/session.js`).
+- `wrangler.toml` bevat de niet-geheime instellingen onder `[vars]`. Gewone tekstvariabelen uit het dashboard worden door Cloudflare genegeerd zolang er een `wrangler.toml` is.
 
-- **Build command:** `npm run build`
-- **Build output directory:** `dist`
-- De serverroutes staan in `functions/api/[[route]].js` (koppeling naar `api/chat.js` en `api/session.js`).
-- `wrangler.toml` zet de Node-compatibiliteit aan (`nodejs_compat`), nodig voor de wachtwoord-hashing.
+## Geheime sleutels (Cloudflare → Settings → Variables and secrets, type Secret)
 
-## Instellingen in Cloudflare (Settings → Variables and Secrets)
+- `OPENAI_API_KEY`: API-sleutel van OpenAI.
+- `SYSTEME_API_KEY`: API-sleutel van Systeme.io (Profiel → Public API keys).
+- `BOT_SESSION_SECRET`: minimaal 32 willekeurige tekens. Wijzigen logt iedereen uit en maakt openstaande inloglinks ongeldig.
 
-Zet deze als **Secret** (versleuteld):
+## Inloggen via Systeme.io (zonder wachtwoorden)
 
-- `OPENAI_API_KEY`: de API-sleutel van OpenAI (platform.openai.com → API keys).
-- `SUPABASE_URL` en `SUPABASE_SERVICE_ROLE_KEY`: voor de toegangscontrole (tabel `codes`) in het bot-project.
-- `BOT_SESSION_SECRET`: minimaal 32 willekeurige tekens.
+1. De klant vult zijn e-mailadres in.
+2. De Bot zoekt het contact op in Systeme.io en controleert of het een toegangstag heeft (`BOT_ACCESS_TAGS`, standaard `bot` en `training + bot`).
+3. Zo ja: de Bot zet een ondertekende inloglink (15 minuten geldig) in het contactveld `bot_inloglink` en zet de tag `bot-inloglink` opnieuw op het contact.
+4. Een automatisering in Systeme.io (trigger: tag `bot-inloglink` toegevoegd) mailt de link.
+5. De klant klikt op de link; de Bot controleert de tag opnieuw en start een sessie van 30 minuten.
 
-Optioneel:
+Er worden nergens wachtwoorden aangemaakt of opgeslagen. Het antwoord bij het aanvragen is altijd hetzelfde, zodat niet te achterhalen is wie klant is. Binnen een minuut opnieuw aanvragen stuurt geen tweede mail.
 
-- `BOT_MODEL`: het sterke model, standaard `gpt-5.6-sol`.
-- `BOT_LIGHT_MODEL`: het lichtere model na het dagmaximum, standaard `gpt-5.6-terra`.
-- `BOT_DAILY_PREMIUM`: aantal berichten per gebruiker per dag met het sterke model, standaard `10`.
+Toegang intrekken: haal de toegangstag weg in Systeme.io. Een al lopende sessie verloopt daarna binnen 30 minuten zonder activiteit.
 
-Let op: omdat er een `wrangler.toml` is, worden gewone tekstvariabelen uit het dashboard genegeerd. Zet niet-geheime instellingen onder `[vars]` in `wrangler.toml`; geheime sleutels als Secret in het dashboard.
-- `OPENAI_BASE_URL`: bijvoorbeeld `https://eu.api.openai.com` voor EU-dataresidentie, alleen als je OpenAI-project dat ondersteunt.
-
-Zet nooit een service-role-key of API-sleutel in de frontend.
+Nieuwe toegangstag (bijvoorbeeld voor het abonnement): voeg de naam toe aan `BOT_ACCESS_TAGS` in `wrangler.toml`.
 
 ## Privacy-opzet (dataminimalisatie)
 
-- **Gespreksinhoud wordt nergens opgeslagen.** Gesprekken bestaan alleen in het geopende tabblad en verdwijnen bij uitloggen, automatisch uitloggen of sluiten van het tabblad. Er is geen server-route meer om gesprekken op te slaan.
-- **OpenAI bewaart het antwoord niet voor latere opvraging:** elke aanroep gebruikt `store: false`. Gegevens via de API worden door OpenAI standaard niet gebruikt voor training. Sluit de verwerkersovereenkomst (DPA) van OpenAI af en controleer de actuele bewaartermijnen voor misbruikmonitoring in het OpenAI-dashboard.
-- **Geen inhoud in logs:** bij fouten logt de server alleen een statuscode en fouttype, nooit tekst of afbeeldingen.
-- **Wat je wél verwerkt:** e-mailadres, toegangscode, wachtwoord-hash en toegangsdatum (tabel `codes` en de gedeelde account-provider).
-- Afbeeldingen (screenshots) worden niet geaccepteerd: alleen tekst, zodat klanten zelf namen en details kunnen weghalen.
-- Cloudflare is verwerker voor de hosting. Neem Cloudflare op in je verwerkersoverzicht.
-
-## Eenmalig: dagteller aanmaken
-
-Voer `supabase/bot-usage.sql` uit in de SQL Editor van het **bot**-project. De tabel `bot_usage` bevat alleen toegangscode, datum en aantal (geen inhoud) en wordt na 2 dagen automatisch opgeschoond.
-
-## Eenmalig: oude gesprekken wissen
-
-De vorige versie bewaarde gesprekken in de Supabase-tabel `chat`. Voer na de uitrol `supabase/remove-chat-history.sql` uit in de SQL Editor van het **bot**-project.
+- Gespreksinhoud wordt nergens opgeslagen. Gebruikers kunnen een gesprek zelf downloaden en later weer inladen; dat gebeurt alleen in de browser.
+- OpenAI: elke aanroep met `store: false`. Sluit de verwerkersovereenkomst (DPA) van OpenAI af.
+- Geen inhoud in logs: alleen statuscode en fouttype.
+- Alleen tekst, geen afbeeldingen.
+- De Bot heeft geen eigen database. Klantgegevens staan alleen in Systeme.io. Verwerkers: Cloudflare (hosting), OpenAI (AI), Systeme.io (klanten en inlogmail).
 
 ## Testen na uitrol
 
-Test deze punten:
-
-- inloggen met een ongeldige code;
-- inloggen met e-mail;
-- chatten zonder login (geeft 401);
-- een gesprek met tekst;
-- uitloggen en opnieuw inloggen (de gesprekken zijn dan weg);
-- gebruik op mobiel.
-
-Overweeg vóór brede uitrol een limiet op het aantal aanvragen (rate limit) voor inloggen en AI-gebruik.
+Inloglink aanvragen met een klant-e-mailadres (mail komt binnen, link werkt), met een e-mailadres zonder tag (geen mail), verlopen link (na 15 minuten), uitloggen, gesprek voeren, downloaden en weer inladen, mobiel.
 
 Lokale tests: `node --test tests/*.test.js tests/*.test.mjs`.

@@ -1,4 +1,4 @@
-const CACHE = "always-in-control-install-v2";
+const CACHE = "always-in-control-install-v3";
 const ASSETS = ["/icon-180.png", "/icon-192.png", "/icon-512.png", "/manifest.webmanifest"];
 self.addEventListener("install", event => {
   self.skipWaiting();

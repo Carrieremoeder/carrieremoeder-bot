@@ -3,13 +3,18 @@ pages_build_output_dir = "dist"
 compatibility_date = "2026-10-01"
 compatibility_flags = ["nodejs_compat"]
 
-# Niet-geheime instellingen. Geheime sleutels (OPENAI_API_KEY, SUPABASE_SERVICE_ROLE_KEY,
+# Niet-geheime instellingen. Geheime sleutels (OPENAI_API_KEY, SYSTEME_API_KEY,
 # BOT_SESSION_SECRET) staan als "Secret" in het Cloudflare-dashboard.
 [vars]
-SUPABASE_URL = "https://ejtfgvlaygrcthjihwoa.supabase.co"
+BOT_PUBLIC_URL = "https://bot.carrieremoeder.com"
 
-# Kosten: goedkoopste instelling (test). Alles via Luna, weinig denkwerk.
+# AI: goedkoopste instelling. Alles via Luna, weinig denkwerk.
 BOT_MODEL = "gpt-5.6-luna"
-BOT_LIGHT_MODEL = "gpt-5.6-luna"
-BOT_DAILY_PREMIUM = "0"
 BOT_REASONING_EFFORT = "low"
+
+# Inloggen via Systeme.io (geen wachtwoorden, geen eigen klantenlijst).
+# Tags die toegang geven (komma-gescheiden, hoofdletters maken niet uit).
+BOT_ACCESS_TAGS = "bot,training + bot"
+# Tag die de inlogmail-automatisering in Systeme.io start, en het veld met de inloglink.
+BOT_LOGIN_TAG = "bot-inloglink"
+BOT_LOGIN_FIELD = "bot_inloglink"
