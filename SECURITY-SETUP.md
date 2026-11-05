@@ -39,3 +39,9 @@ Nieuwe toegangstag (bijvoorbeeld voor het abonnement): voeg de naam toe aan `BOT
 Inloglink aanvragen met een klant-e-mailadres (mail komt binnen, link werkt), met een e-mailadres zonder tag (geen mail), verlopen link (na 24 uur), "blijf ingelogd" (30 dagen, vervalt direct als de toegangstag weg is), uitloggen, gesprek voeren, downloaden en weer inladen, mobiel.
 
 Lokale tests: `node --test tests/*.test.js tests/*.test.mjs`.
+
+## Abonnement en status
+
+- Iedereen met een toegangstag houdt die tag. Het contactveld **Bot status** bepaalt of de Bot gebruikt mag worden: leeg (lifetime) of "abonnee sinds …" = toegang, "gestopt per …" = geen toegang.
+- Workflow in Systeme.io ("Nieuwe verkoop", "Verkoop geannuleerd", "Betaling van abonnement mislukt") stuurt een webhook naar `https://bot.meestermasha.nl/api/sync`.
+- De Bot vertrouwt de webhook niet: hij zoekt het contact en de abonnementen zelf op in Systeme.io en zet daarna het veld. Bij inloggen en bij "blijf ingelogd" wordt de status van abonnees opnieuw opgehaald.

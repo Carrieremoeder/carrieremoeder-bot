@@ -2,8 +2,9 @@
 // Vertaalt een Cloudflare-verzoek naar het req/res-formaat dat de routes gebruiken.
 import chat from '../../api/chat.js';
 import session from '../../api/session.js';
+import sync from '../../api/sync.js';
 
-const routes = { chat, session };
+const routes = { chat, session, sync };
 
 function makeReq(request, body) {
   const url = new URL(request.url);
@@ -72,7 +73,11 @@ export async function onRequest(context) {
   if (!['GET', 'HEAD'].includes(request.method)) {
     const text = await request.text();
     if (text) {
-      try { body = JSON.parse(text); } catch { return new Response(JSON.stringify({ error: 'Ongeldige aanvraag' }), { status: 400, headers: { 'Content-Type': 'application/json' } }); }
+      try { body = JSON.parse(text); } catch {
+        // Webhooks kunnen ook als formulier binnenkomen.
+        if (name === 'sync') body = Object.fromEntries(new URLSearchParams(text));
+        else return new Response(JSON.stringify({ error: 'Ongeldige aanvraag' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      }
     }
   }
 

@@ -18,3 +18,9 @@ BOT_ACCESS_TAGS = "Always In Control BOT,Always In Control Bot + Training"
 # Tag die de inlogmail-automatisering in Systeme.io start, en het veld met de inloglink.
 BOT_LOGIN_TAG = "bot-inloglink"
 BOT_LOGIN_FIELD = "bot_inloglink"
+
+# Abonnement: veld met de status ("abonnee sinds …" / "gestopt per …") en herkenning van het bot-abonnement.
+BOT_STATUS_FIELD = "bot_status"
+BOT_SUBSCRIPTION_MATCH = "bot abonnement|always in control bot - abonnement"
+# Tijdelijk: logt alleen de veldnamen van een abonnement (geen persoonsgegevens) om de koppeling te controleren.
+BOT_SYNC_DEBUG = "1"

@@ -1,5 +1,15 @@
 import { clearSession, createLoginToken, currentSession, issuedAtOfLink, readLoginToken, sameOrigin, setSession } from '../lib/security.js';
-import { currentLoginField, ensureLoginField, ensureLoginTag, findContact, getContact, hasAccess, normaliseEmail, sendLoginLink } from '../lib/systeme.js';
+import { currentLoginField, ensureLoginField, ensureLoginTag, findContact, getContact, normaliseEmail, sendLoginLink } from '../lib/systeme.js';
+import { canUseBot, currentStatus, syncStatus } from '../lib/botStatus.js';
+
+// Bij abonnees de status eerst vers ophalen uit Systeme.io (lifetime klanten hebben geen status).
+async function freshAccess(contact) {
+  if (!contact) return false;
+  if (/^abonnee/i.test(currentStatus(contact))) {
+    try { contact = await syncStatus(contact); } catch (error) { console.error('Bot status:', { status: error?.status || 0, detail: String(error?.detail || error?.message || '').slice(0, 200) }); }
+  }
+  return canUseBot(contact);
+}
 
 const RESEND_COOLDOWN_MS = 60 * 1000;
 const SENT_MESSAGE = 'Als dit e-mailadres toegang heeft tot de Bot, ontvang je binnen een paar minuten een inloglink. Controleer ook je spammap. Geen mail ontvangen? Gebruik het e-mailadres waarmee je de Bot hebt gekocht.';
@@ -20,7 +30,7 @@ async function activeSession(req) {
   if (!id) return null;
   let contact = null;
   try { contact = await getContact(id); } catch (error) { if (error.status !== 404) throw error; }
-  return hasAccess(contact) ? session : null;
+  return (await freshAccess(contact)) ? session : null;
 }
 
 export default async function handler(req, res) {
@@ -50,7 +60,7 @@ export default async function handler(req, res) {
       await ensureLoginField();
       await ensureLoginTag();
       const contact = await findContact(email);
-      if (contact && hasAccess(contact)) {
+      if (contact && await freshAccess(contact)) {
         const recentlySent = Date.now() - issuedAtOfLink(currentLoginField(contact)) < RESEND_COOLDOWN_MS;
         if (!recentlySent) await sendLoginLink(contact, `${publicUrl(req)}/?login=${createLoginToken(contact.id, Date.now(), req.body?.remember === true)}`);
       }
@@ -63,7 +73,7 @@ export default async function handler(req, res) {
       if (!login) return res.status(401).json({ error: 'Deze inloglink is verlopen of ongeldig. Vraag hieronder een nieuwe aan.' });
       let contact = null;
       try { contact = await getContact(login.contactId); } catch (error) { if (error.status !== 404) throw error; }
-      if (!hasAccess(contact)) return res.status(403).json({ error: 'We vinden geen actieve toegang tot de Bot bij dit account.' });
+      if (!(await freshAccess(contact))) return res.status(403).json({ error: 'We vinden geen actieve toegang tot de Bot bij dit account.' });
       return res.status(200).json({ loggedIn: true, token: setSession(res, 'SIO-' + login.contactId, login.remember), remember: login.remember });
     }
 
