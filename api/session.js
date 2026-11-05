@@ -1,6 +1,7 @@
 import { clearSession, createLoginToken, currentSession, issuedAtOfLink, readLoginToken, sameOrigin, setSession } from '../lib/security.js';
 import { currentLoginField, ensureLoginField, ensureLoginTag, findContact, getContact, normaliseEmail, sendLoginLink } from '../lib/systeme.js';
 import { canUseBot, currentStatus, syncStatus } from '../lib/botStatus.js';
+import { hasAnswered, saveConsent } from '../lib/consent.js';
 
 // Bij abonnees de status eerst vers ophalen uit Systeme.io (lifetime klanten hebben geen status).
 async function freshAccess(contact) {
@@ -34,13 +35,27 @@ async function activeSession(req) {
   return (await freshAccess(contact)) ? session : null;
 }
 
+function contactIdOf(session) { return /^SIO-(\d{1,20})$/.exec(session?.code || '')?.[1] || null; }
+
+// Heeft de klant de toestemmingsvraag al beantwoord? Lukt het opvragen niet, dan blokkeren we de klant niet:
+// het welkomstscherm vraagt dan alsnog om geen gevoelige gegevens te delen.
+async function consentAnswered(session, contact) {
+  try {
+    if (!contact) { const id = contactIdOf(session); if (!id) return true; contact = await getContact(id); }
+    return hasAnswered(contact);
+  } catch (error) {
+    console.error('Bot consent:', { status: error?.status || 0 });
+    return true;
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   try {
     if (req.method === 'GET') {
       const session = await activeSession(req);
       if (!session) return res.status(401).json({ error: 'Log opnieuw in.' });
-      return res.status(200).json({ loggedIn: true });
+      return res.status(200).json({ loggedIn: true, consentAnswered: await consentAnswered(session) });
     }
     if (req.method === 'DELETE') { if (!sameOrigin(req)) return res.status(403).end(); clearSession(res); return res.status(204).end(); }
     if (req.method !== 'POST') return res.status(405).end();
@@ -51,6 +66,16 @@ export default async function handler(req, res) {
       const session = await activeSession(req);
       if (!session) return res.status(401).json({ error: 'Log opnieuw in.' });
       return res.status(200).json({ loggedIn: true, token: setSession(res, session.code, session.remember) });
+    }
+
+    // Toestemmingsvraag beantwoord (ja of nee); wordt met datum en versie vastgelegd in Systeme.io.
+    if (action === 'consent') {
+      const session = await activeSession(req);
+      const id = contactIdOf(session);
+      if (!session || !id) return res.status(401).json({ error: 'Log opnieuw in.' });
+      if (typeof req.body?.choice !== 'boolean') return res.status(400).json({ error: 'Ongeldige aanvraag.' });
+      await saveConsent(id, req.body.choice);
+      return res.status(200).json({ saved: true });
     }
 
     // Stap 1: inloglink aanvragen. Altijd hetzelfde antwoord, zodat niemand kan uitzoeken wie klant is.
@@ -75,7 +100,7 @@ export default async function handler(req, res) {
       let contact = null;
       try { contact = await getContact(login.contactId); } catch (error) { if (error.status !== 404) throw error; }
       if (!(await freshAccess(contact))) return res.status(403).json({ error: 'We vinden geen actieve toegang tot de Bot bij dit account.' });
-      return res.status(200).json({ loggedIn: true, token: setSession(res, 'SIO-' + login.contactId, login.remember), remember: login.remember });
+      return res.status(200).json({ loggedIn: true, token: setSession(res, 'SIO-' + login.contactId, login.remember), remember: login.remember, consentAnswered: hasAnswered(contact) });
     }
 
     return res.status(400).json({ error: 'Ongeldige aanvraag.' });
