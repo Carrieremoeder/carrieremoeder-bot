@@ -38,6 +38,7 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true });
   } catch (error) {
     console.error('Bot sync:', { type: error?.name || 'error', status: error?.status || 0, detail: String(error?.detail || error?.message || '').slice(0, 300) });
-    return res.status(200).json({ ok: false });
+    const debug = process.env.BOT_SYNC_DEBUG === '1' ? { status: error?.status || 0, detail: String(error?.detail || error?.message || '').slice(0, 300) } : undefined;
+    return res.status(200).json({ ok: false, debug });
   }
 }
