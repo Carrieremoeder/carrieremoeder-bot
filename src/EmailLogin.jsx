@@ -27,7 +27,7 @@ export default function EmailLogin({ api, onLogin, notice, styles: g }) {
     window.history.replaceState(null, '', url.pathname + url.search);
     tabSession.clear();
     api('session', { method: 'POST', body: JSON.stringify({ action: 'verify-link', token: authReturn.loginToken }) })
-      .then(data => { if (data.token) { tabSession.start(data.token, data.remember === true); onLogin(); } })
+      .then(data => { if (data.token) { tabSession.start(data.token, data.remember === true); onLogin(data); } })
       .catch(err => { setStep('email'); setError(err.message || 'Deze inloglink werkt niet meer. Vraag hieronder een nieuwe aan.'); });
   }, [authReturn, api, onLogin]);
 
@@ -49,6 +49,7 @@ export default function EmailLogin({ api, onLogin, notice, styles: g }) {
   return <div style={{ ...g.loginWrap, margin: '40px auto' }}>
     <h1 style={g.loginH}>Always In Control Bot</h1>
     <p style={{ ...g.loginP, marginBottom: '24px' }}>Een lastig bericht van je ex ontvangen? Plak het bericht of vertel wat er speelt. De bot helpt je begrijpen wat er gebeurt, afwegen of je wilt reageren en een rustige, duidelijke reactie formuleren.</p>
+    <p style={{ fontSize: '12px', color: K.kleur.tekstMeta, margin: '-8px 0 24px', lineHeight: 1.7 }}>De Bot is een AI-coach: je praat met een computerprogramma, niet met een mens. Hij geeft geen juridisch, therapeutisch of medisch advies.</p>
     {notice && <p role="status" style={panel}>{notice}</p>}
     {step === 'verifying' && <p role="status" style={panel}>Je wordt ingelogd…</p>}
     {message && <p role="status" style={panel}>{message}</p>}

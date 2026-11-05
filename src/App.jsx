@@ -86,6 +86,40 @@ function BrandHeader({ loggedIn = false, loading = false, sidebarOpen, onMenu, o
   </header>;
 }
 
+const PRIVACY_URL = "https://www.meestermasha.nl/privacybeleid";
+const TERMS_URL = "https://www.meestermasha.nl/gebruiksvoorwaarden-bot";
+
+function CrisisNote({ style }) {
+  return <p style={{ fontSize: "12px", lineHeight: 1.6, color: K.kleur.tekstZacht, margin: 0, ...style }}>
+    <strong>In nood?</strong> Bij acuut gevaar: bel <a href="tel:112">112</a>. Huiselijk geweld of kindermishandeling: Veilig Thuis <a href="tel:08002000">0800-2000</a> (gratis, dag en nacht). Denk je aan zelfdoding: <a href="tel:113">113</a> of <a href="tel:08000113">0800-0113</a>. De Bot is geen hulpdienst.
+  </p>;
+}
+
+function ConsentScreen({ styles: g, onAnswer, onLogout, saving, error }) {
+  const [checked, setChecked] = useState(false);
+  const link = { color: K.kleur.tekst, textDecoration: "underline", textUnderlineOffset: "3px" };
+  return <div style={{ ...g.loginWrap, maxWidth: "560px", margin: "40px auto" }}>
+    <h1 style={{ ...g.loginH, fontSize: "32px" }}>Voordat je begint</h1>
+    <div style={{ fontSize: "14px", lineHeight: 1.75, color: K.kleur.tekstZacht }}>
+      <p style={{ margin: "0 0 12px" }}><strong>Je praat met een AI-coach.</strong> De Bot is een computerprogramma, geen mens. AI kan fouten maken. De Bot geeft geen juridisch, therapeutisch, psychologisch of medisch advies; jij beslist zelf wat je met een antwoord doet.</p>
+      <p style={{ margin: "0 0 12px" }}><strong>Je gesprekken worden niet bewaard.</strong> Je tekst wordt alleen gebruikt om het antwoord te maken. Wil je een gesprek houden, dan kun je het zelf downloaden.</p>
+      <p style={{ margin: "0 0 12px" }}><strong>Deel zo min mogelijk.</strong> Vervang namen door bijvoorbeeld "mijn ex" of "onze zoon" en laat adressen, scholen en telefoonnummers weg. Deel geen gevoelige gegevens over je ex, je kinderen of anderen.</p>
+      <p style={{ margin: "0 0 16px" }}><strong>Gevoelige gegevens over jezelf.</strong> De Bot vraagt hier nooit om. Deel je toch iets gevoeligs over jezelf, bijvoorbeeld over je gezondheid, dan mag de Bot dat alleen gebruiken met jouw toestemming. Je kunt de Bot ook zonder deze toestemming gebruiken; deel dan geen gevoelige gegevens over jezelf. Je kunt je keuze altijd wijzigen via info@meestermasha.nl.</p>
+    </div>
+    <label style={{ display: "flex", gap: "10px", alignItems: "flex-start", fontSize: "13px", lineHeight: 1.6, color: K.kleur.tekst, margin: "0 0 16px", cursor: "pointer" }}>
+      <input type="checkbox" checked={checked} onChange={e => setChecked(e.target.checked)} disabled={saving} style={{ marginTop: "4px", accentColor: K.kleur.tekst }} />
+      <span>Ik geef toestemming dat de Bot gevoelige gegevens die ik zelf over mijzelf deel, gebruikt om mij te coachen. Ze worden niet bewaard.</span>
+    </label>
+    {error && <p role="alert" style={g.err}>{error}</p>}
+    <button type="button" style={{ ...g.btnP, width: "100%" }} disabled={saving} onClick={() => onAnswer(checked)}>{saving ? "Even wachten…" : checked ? "Akkoord, ga verder →" : "Verder zonder toestemming →"}</button>
+    <p style={{ fontSize: "12px", color: K.kleur.tekstMeta, marginTop: "14px", lineHeight: 1.7 }}>
+      Lees ook de <a href={PRIVACY_URL} target="_blank" rel="noopener" style={link}>privacyverklaring</a> en de <a href={TERMS_URL} target="_blank" rel="noopener" style={link}>gebruiksvoorwaarden</a>.
+    </p>
+    <CrisisNote style={{ marginTop: "18px" }} />
+    <button type="button" style={{ ...g.ghostBtn, marginTop: "18px" }} onClick={onLogout} disabled={saving}>Uitloggen</button>
+  </div>;
+}
+
 const QUICK_CHOICES = [
   { tint: "#FBF7F0", title: "Ik heb een bericht van mijn ex ontvangen", detail: "Kopieer het bericht (in WhatsApp: lang drukken → Kopiëren) en vervang namen door bijvoorbeeld \"mijn ex\".", draft: "Ik heb dit bericht van mijn ex ontvangen: " },
   { tint: "#F4EEE5", title: "Ik wil zelf een bericht aan mijn ex sturen", detail: "Vind woorden die duidelijk zijn en bij jouw grenzen passen.", draft: "Ik wil zelf een bericht aan mijn ex sturen. Dit wil ik duidelijk maken: " },
@@ -95,6 +129,9 @@ const QUICK_CHOICES = [
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [consentNeeded, setConsentNeeded] = useState(false);
+  const [consentSaving, setConsentSaving] = useState(false);
+  const [consentError, setConsentError] = useState("");
   const [conversations, setConversations] = useState([]);
   const [activeId, setActiveId] = useState(null);
   const [history, setHistory] = useState([]);
@@ -120,7 +157,7 @@ export default function App() {
       sessionGeneration.current += 1;
       chatController.current?.abort();
       imageReader.current?.abort();
-      setLoggedIn(false); setHistory([]); setConversations([]); setActiveId(null);
+      setLoggedIn(false); setConsentNeeded(false); setConsentError(""); setHistory([]); setConversations([]); setActiveId(null);
       setInput(""); setPendingImg(null); setChatError(""); setLoading(false); setUploadingImg(false); setIdleSeconds(null); setLightMode(false);
       setSessionNotice(reason === 'idle' ? 'Je bent automatisch uitgelogd na 30 minuten zonder activiteit. Log opnieuw in om verder te gaan.' : reason === 'expired' ? 'Je sessie is verlopen. Log opnieuw in om verder te gaan.' : '');
     });
@@ -128,7 +165,7 @@ export default function App() {
     const generation = sessionGeneration.current;
     if (Object.keys(readAuthReturn(window.location)).length) tabSession.clear();
     if (tabSession.token()) {
-      api("session").then(() => { if (!cancelled && generation === sessionGeneration.current && tabSession.token()) setLoggedIn(true); })
+      api("session").then(data => { if (!cancelled && generation === sessionGeneration.current && tabSession.token()) { setConsentNeeded(data?.consentAnswered === false); setLoggedIn(true); } })
         .catch(() => tabSession.clear('expired')).finally(() => { if (!cancelled) setChecking(false); });
     } else setChecking(false);
     return () => { cancelled = true; unsubscribe(); };
@@ -283,6 +320,13 @@ export default function App() {
     if (generation === sessionGeneration.current) setLoading(false);
   }
 
+  async function answerConsent(choice) {
+    setConsentSaving(true); setConsentError("");
+    try { await api("session", { method: "POST", body: JSON.stringify({ action: "consent", choice }) }); setConsentNeeded(false); }
+    catch (e) { setConsentError(e.message || "Opslaan lukt niet. Probeer het opnieuw."); }
+    finally { setConsentSaving(false); }
+  }
+
   function logout() { tabSession.clear(); api("session", { method: "DELETE" }).catch(() => {}); }
   // Privacy: het bestand wordt in de browser gemaakt en direct op het apparaat van de gebruiker opgeslagen.
   // Privacy: het bestand wordt alleen in de browser gelezen; er gaat niets naar de server tot de gebruiker verder praat.
@@ -393,7 +437,14 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
     <div style={{ ...g.page, overflowY: "auto" }}>
       <style>{CSS}</style>
       <BrandHeader />
-      <EmailLogin api={api} styles={g} notice={sessionNotice} onLogin={() => { setSessionNotice(""); setLoggedIn(true); }} />
+      <EmailLogin api={api} styles={g} notice={sessionNotice} onLogin={data => { setSessionNotice(""); setConsentNeeded(data?.consentAnswered === false); setLoggedIn(true); }} />
+    </div>
+  );
+  if (consentNeeded) return (
+    <div style={{ ...g.page, overflowY: "auto" }}>
+      <style>{CSS}</style>
+      <BrandHeader loggedIn={false} />
+      <ConsentScreen styles={g} onAnswer={answerConsent} onLogout={logout} saving={consentSaving} error={consentError} />
     </div>
   );
 
@@ -420,6 +471,7 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
               <div style={g.convDate}>{conv.date} <button type="button" disabled={loading} aria-label="Gesprek verwijderen" onClick={e => { e.stopPropagation(); deleteConversation(conv.id); }} style={{ border: "none", background: "transparent", color: C.muted, cursor: "pointer", float: "right" }}>Verwijder</button></div>
             </div>
           ))}
+          <CrisisNote style={{ padding: "16px", marginTop: "auto", fontSize: "11px", borderTop: `1px solid ${K.kleur.randStructuur}` }} />
         </aside>}
 
         <main style={g.mainArea}>
@@ -453,6 +505,8 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
                   {" "}· kies een gesprek dat je eerder hebt gedownload. Het bestand wordt alleen op je eigen apparaat gelezen.
                 </p>
                 <p style={{ ...g.emptyP, fontSize: "12px", marginTop: "8px" }}>Je gesprekken worden niet opgeslagen. Ze verdwijnen als je uitlogt of dit tabblad sluit. Je kunt een gesprek wel zelf downloaden.</p>
+                <p style={{ ...g.emptyP, fontSize: "12px", marginTop: "8px" }}>Je praat met een AI-coach, niet met een mens. AI kan fouten maken; dit is geen juridisch, therapeutisch of medisch advies.</p>
+                <CrisisNote style={{ marginTop: "10px", maxWidth: "540px" }} />
               </div>}
               {lightMode && <p role="status" style={{ fontSize: "12px", color: K.kleur.tekstZacht, lineHeight: 1.5, margin: "0 0 8px" }}>Je hebt vandaag je berichten met de uitgebreide coach gebruikt. De coach helpt je verder in een lichtere versie. Morgen staat de uitgebreide coach weer voor je klaar.</p>}
               {chatError && <p role="alert" style={g.err}>{chatError} Je bericht staat nog klaar om opnieuw te versturen.</p>}
@@ -466,7 +520,7 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
               </div>
               <div className="composer-hints" style={{ display: "flex", justifyContent: "space-between", gap: "18px", marginTop: "10px", lineHeight: 1.6 }}>
                 <span className="keyboard-hint" style={{ fontSize: "10px", color: C.muted }}>Shift+Enter voor een nieuwe regel</span>
-                <span style={{ fontSize: "10px", color: C.muted }}>Maak namen en andere herkenbare details onleesbaar vóór je iets deelt</span>
+                <span style={{ fontSize: "10px", color: C.muted }}>AI-coach, geen mens · Maak namen en andere herkenbare details onleesbaar vóór je iets deelt</span>
               </div>
             </div>
           </div>
