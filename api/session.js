@@ -5,7 +5,8 @@ import { canUseBot, currentStatus, syncStatus } from '../lib/botStatus.js';
 // Bij abonnees de status eerst vers ophalen uit Systeme.io (lifetime klanten hebben geen status).
 async function freshAccess(contact) {
   if (!contact) return false;
-  if (/^abonnee/i.test(currentStatus(contact))) {
+  // Abonnees én gestopte abonnees opnieuw controleren: wie alsnog betaalt, krijgt zo vanzelf weer toegang.
+  if (/^(abonnee|gestopt)/i.test(currentStatus(contact))) {
     try { contact = await syncStatus(contact); } catch (error) { console.error('Bot status:', { status: error?.status || 0, detail: String(error?.detail || error?.message || '').slice(0, 200) }); }
   }
   return canUseBot(contact);

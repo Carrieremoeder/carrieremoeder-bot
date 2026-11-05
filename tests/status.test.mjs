@@ -53,3 +53,15 @@ test('syncStatus schrijft gestopt, laat lifetime met rust', async () => {
   assert.ok(!calls.some(c => c[0] === 'PATCH'));
   assert.equal(canUseBot(other), true);
 });
+
+test('gestopt en alsnog betaald: toegang komt terug', async () => {
+  process.env.SYSTEME_API_KEY = 'test';
+  globalThis.fetch = async (url) => {
+    const u = new URL(url);
+    if (u.pathname === '/api/payment/subscriptions') return Response.json({ items: [{ id: 5, status: 'active', createdAt: '2026-12-01T10:00:00Z', pricePlan: { innerName: 'Bot abonnement 13 p/m (vanaf dec 2026)' } }], hasMore: false });
+    if (u.pathname === '/api/contact_fields') return Response.json({ items: [{ slug: 'bot_status' }] });
+    return new Response('', { status: 200 });
+  };
+  const c = await syncStatus({ id: 4, tags: [tag], fields: [{ slug: 'bot_status', value: 'gestopt per 05-01-2027' }] });
+  assert.equal(canUseBot(c), true);
+});
