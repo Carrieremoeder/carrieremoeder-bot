@@ -6,7 +6,7 @@ compatibility_flags = ["nodejs_compat"]
 # Niet-geheime instellingen. Geheime sleutels (OPENAI_API_KEY, SYSTEME_API_KEY,
 # BOT_SESSION_SECRET) staan als "Secret" in het Cloudflare-dashboard.
 [vars]
-BOT_PUBLIC_URL = "https://bot.carrieremoeder.com"
+BOT_PUBLIC_URL = "https://bot.meestermasha.nl"
 
 # AI: goedkoopste instelling. Alles via Luna, weinig denkwerk.
 BOT_MODEL = "gpt-5.6-luna"
