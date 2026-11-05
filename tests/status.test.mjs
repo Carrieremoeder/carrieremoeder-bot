@@ -32,7 +32,7 @@ test('syncStatus schrijft gestopt, laat lifetime met rust', async () => {
   let subs = [];
   globalThis.fetch = async (url, init = {}) => {
     const u = new URL(url); calls.push([init.method || 'GET', u.pathname]);
-    if (u.pathname === '/api/payment/subscriptions') return Response.json({ items: subs, hasMore: false });
+    if (u.pathname === '/api/payment/subscriptions') return Response.json({ items: subs.filter(s => String(s.contact?.id) === u.searchParams.get('contact')), hasMore: false });
     if (u.pathname === '/api/contact_fields') return Response.json({ items: [{ slug: 'bot_status' }] });
     if (u.pathname.startsWith('/api/contacts/')) return new Response('', { status: 200 });
     return new Response('nf', { status: 404 });
