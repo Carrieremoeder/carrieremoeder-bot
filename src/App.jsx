@@ -463,7 +463,7 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
         {sidebarOpen && <aside id="gesprekkenmenu" aria-label="Gesprekken" className="chat-sidebar" style={g.sidebar}>
           <button style={g.newBtn} disabled={loading} onClick={newConversation}>+ Nieuw gesprek</button>
           <div style={g.sideHeader}>Gesprekken</div>
-          <div style={{ padding: "0 16px 10px", fontSize: "11px", lineHeight: 1.5, color: C.muted }}>Gesprekken worden niet bewaard. Ze verdwijnen als je uitlogt of dit tabblad sluit. Wil je een gesprek houden? Kies "Gesprek downloaden".</div>
+          <div style={{ padding: "0 16px 10px", fontSize: "11px", lineHeight: 1.5, color: C.muted }}>Gesprekken worden niet bewaard. Ze verdwijnen als je uitlogt of dit tabblad sluit. Wil je een gesprek houden? Kies "Gesprek downloaden" en bewaar het bestand op een plek waar alleen jij bij kunt.</div>
           {conversations.length === 0 && <div style={{ padding: "10px 16px", fontSize: "12px", color: C.muted }}>Nog geen gesprekken</div>}
           {conversations.map(conv => (
             <div key={conv.id} style={g.convItem(conv.id === activeId)}>
@@ -504,7 +504,7 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
                   <button type="button" onClick={() => fileRef.current?.click()} style={{ background: "none", border: "none", padding: 0, color: C.dark, textDecoration: "underline", textUnderlineOffset: "3px", cursor: "pointer", fontSize: "12px" }}>Verder met een eerder gesprek</button>
                   {" "}· kies een gesprek dat je eerder hebt gedownload. Het bestand wordt alleen op je eigen apparaat gelezen.
                 </p>
-                <p style={{ ...g.emptyP, fontSize: "12px", marginTop: "8px" }}>Je gesprekken worden niet opgeslagen. Ze verdwijnen als je uitlogt of dit tabblad sluit. Je kunt een gesprek wel zelf downloaden.</p>
+                <p style={{ ...g.emptyP, fontSize: "12px", marginTop: "8px" }}>Je gesprekken worden niet opgeslagen. Ze verdwijnen als je uitlogt of dit tabblad sluit. Je kunt een gesprek wel zelf downloaden; bewaar het bestand op een plek waar alleen jij bij kunt.</p>
                 <p style={{ ...g.emptyP, fontSize: "12px", marginTop: "8px" }}>Je praat met een AI-coach, niet met een mens. AI kan fouten maken; dit is geen juridisch, therapeutisch of medisch advies.</p>
                 <CrisisNote style={{ marginTop: "10px", maxWidth: "540px" }} />
               </div>}
