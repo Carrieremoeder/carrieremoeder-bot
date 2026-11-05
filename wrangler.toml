@@ -22,5 +22,3 @@ BOT_LOGIN_FIELD = "bot_inloglink"
 # Abonnement: veld met de status ("abonnee sinds …" / "gestopt per …") en herkenning van het bot-abonnement.
 BOT_STATUS_FIELD = "bot_status"
 BOT_SUBSCRIPTION_MATCH = "bot abonnement|always in control bot - abonnement"
-# Tijdelijk: logt alleen de veldnamen van een abonnement (geen persoonsgegevens) om de koppeling te controleren.
-BOT_SYNC_DEBUG = "1"

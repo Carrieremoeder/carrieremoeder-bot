@@ -35,17 +35,9 @@ export default async function handler(req, res) {
     if (id) { try { contact = await getContact(id); } catch (error) { if (error.status !== 404) throw error; } }
     if (!contact && email) contact = await findContact(email);
     if (contact) await syncStatus(contact);
-    if (process.env.BOT_SYNC_DEBUG === '1' && contact) {
-      const { sio } = await import('../lib/systeme.js');
-      const data = await sio('/payment/subscriptions?limit=10&contact=' + encodeURIComponent(contact.id));
-      const list = Array.isArray(data?.items) ? data.items : [];
-      const shape = (o) => o && typeof o === 'object' ? Object.fromEntries(Object.entries(o).map(([k, v]) => [k, v && typeof v === 'object' ? shape(v) : typeof v === 'string' && /status|name|At$/i.test(k) ? v : typeof v])) : typeof o;
-      return res.status(200).json({ ok: true, debug: list.slice(0, 2).map(shape) });
-    }
     return res.status(200).json({ ok: true });
   } catch (error) {
     console.error('Bot sync:', { type: error?.name || 'error', status: error?.status || 0, detail: String(error?.detail || error?.message || '').slice(0, 300) });
-    const debug = process.env.BOT_SYNC_DEBUG === '1' ? { status: error?.status || 0, detail: String(error?.detail || error?.message || '').slice(0, 300) } : undefined;
-    return res.status(200).json({ ok: false, debug });
+    return res.status(200).json({ ok: false });
   }
 }
