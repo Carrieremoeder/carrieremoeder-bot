@@ -32,7 +32,7 @@ test('opgezegd maar betaalde periode loopt nog = toegang', () => {
 
 function fakeSysteme({ subs, contacts = [] }) {
   const calls = [];
-  const tags = [{ id: 1, name: 'bot-opzegging-gepland' }, { id: 2, name: 'bot-opzegging-verwerkt' }, { id: 3, name: 'bot-opzegging-handmatig' }];
+  const tags = [{ id: 1, name: 'Always In Control BOT' }, { id: 3, name: 'bot-opzegging-handmatig' }];
   globalThis.fetch = async (url, init = {}) => {
     const u = new URL(url); const m = init.method || 'GET';
     calls.push([m, u.pathname, init.body ? JSON.parse(init.body) : null]);
@@ -54,7 +54,7 @@ test('opzeggen na jaar 1: direct per einde betaalperiode', async () => {
   assert.deepEqual(out, { ok: true, result: 'opgezegd' });
   const cancel = calls.find(c => c[1] === '/api/payment/subscriptions/55/cancel');
   assert.deepEqual(cancel[2], { cancel: 'WhenBillingPeriodEnds' });
-  assert.ok(calls.some(c => c[0] === 'POST' && c[1] === '/api/contacts/9/tags' && c[2].tagId === 2));
+  assert.match(calls.find(c => c[0] === 'PATCH')[2].fields[0].value, /^opgezegd op/);
 });
 
 test('opzeggen in jaar 1: gepland, niet direct', async () => {
@@ -64,7 +64,7 @@ test('opzeggen in jaar 1: gepland, niet direct', async () => {
   assert.ok(!calls.some(c => /\/cancel$/.test(c[1])));
   const patch = calls.find(c => c[0] === 'PATCH');
   assert.match(patch[2].fields[0].value, /opzeggen op 2027-11-08/);
-  assert.ok(calls.some(c => c[1] === '/api/contacts/10/tags' && c[2].tagId === 1));
+  assert.ok(!calls.some(c => c[1] === '/api/contacts/10/tags'));
 });
 
 test('geen abonnement: Masha moet het zelf doen', async () => {
@@ -75,12 +75,12 @@ test('geen abonnement: Masha moet het zelf doen', async () => {
 });
 
 test('dagelijkse check zegt op als het moment daar is', async () => {
-  const contact = (id, due) => ({ id, tags: [{ name: 'bot-opzegging-gepland' }], fields: [{ slug: 'bot_opzegging', value: `gepland: opzeggen op ${due}, stopt per x` }] });
+  const contact = (id, due) => ({ id, tags: [{ name: 'Always In Control BOT' }], fields: [{ slug: 'bot_opzegging', value: `gepland: opzeggen op ${due}, stopt per x` }] });
   assert.equal(iso(plannedDueDate(contact(1, '2027-11-08'))), '2027-11-08');
   const calls = fakeSysteme({
     subs: [{ id: 70, contact: { id: 20 }, status: 'active', createdAt: '2026-12-07', pricePlan: { name: 'Bot abonnement' } },
            { id: 71, contact: { id: 21 }, status: 'active', createdAt: '2027-01-07', pricePlan: { name: 'Bot abonnement' } }],
-    contacts: [contact(20, '2027-11-08'), contact(21, '2027-12-08')]
+    contacts: [contact(20, '2027-11-08'), contact(21, '2027-12-08'), { id: 22, tags: [], fields: [] }]
   });
   const summary = await runDueCancellations(D('2027-11-09'));
   assert.deepEqual(summary, { checked: 2, cancelled: 1, waiting: 1, manual: 0 });

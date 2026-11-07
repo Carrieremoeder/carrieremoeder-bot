@@ -51,8 +51,8 @@ Lokale tests: `node --test tests/*.test.js tests/*.test.mjs`.
 - Opzegformulier (meestermasha.nl/opzeggen-bot) → workflow in Systeme.io ("Ingeschreven via funnelformulier", Opzeggen Bot) → webhook naar `https://bot.meestermasha.nl/api/opzeggen`.
 - De Bot zoekt het abonnement zelf op:
   - na het eerste jaar: direct opzeggen per einde van de lopende betaalperiode (`WhenBillingPeriodEnds`);
-  - in het eerste jaar: contactveld **Bot opzegging** = "gepland: opzeggen op JJJJ-MM-DD …" en tag `bot-opzegging-gepland`. De dagelijkse controle zegt op zodra de laatste maand van het eerste jaar begint (dag na de twaalfde betaling), zodat het abonnement precies na twaalf maanden stopt.
-- Tags voor mails aan Masha (automatiseringen in Systeme.io): `bot-opzegging-verwerkt` (ter info) en `bot-opzegging-handmatig` (zelf regelen; reden staat in het veld Bot opzegging).
+  - in het eerste jaar: contactveld **Bot opzegging** = "gepland: opzeggen op JJJJ-MM-DD …". De dagelijkse controle loopt alle contacten met een toegangstag langs en zegt op zodra de laatste maand van het eerste jaar begint (dag na de twaalfde betaling), zodat het abonnement precies na twaalf maanden stopt. Geen extra tag: het Startup-plan heeft maar 10 tags.
+- Lukt het niet: tag `bot-opzegging-handmatig` (automatisering in Systeme.io mailt Masha; de reden staat in het veld Bot opzegging). Elke opzegging geeft Masha daarnaast de bestaande meldingsmail.
 - Dagelijkse controle: Cloudflare Worker `bot-dagelijkse-check` (code in `workers/dagelijkse-check.js`, cron `0 7 * * *`) roept `POST /api/opzeg-check` aan.
 - Geen geheime sleutel: het opzegformulier is openbaar (een sleutel voegt niets toe) en de dagelijkse controle zegt alleen op wat al gepland staat.
 - Herroepen blijft handwerk (terugbetalen via Mollie).
