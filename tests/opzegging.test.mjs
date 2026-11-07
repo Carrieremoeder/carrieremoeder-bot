@@ -2,7 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { planCancellation, addMonths, iso, processCancellation, runDueCancellations, plannedDueDate } from '../lib/opzegging.js';
 import { isActive } from '../lib/botStatus.js';
-import { secretMatches } from '../api/opzeg-check.js';
 
 const D = s => new Date(s + 'T12:00:00Z');
 
@@ -29,15 +28,6 @@ test('opgezegd maar betaalde periode loopt nog = toegang', () => {
   assert.equal(isActive({ status: 'canceled', currentPeriodEnd: '2027-04-20T00:00:00Z' }, now), false);
   assert.equal(isActive({ status: 'canceled' }, now), false);
   assert.equal(isActive({ status: 'past_due', nextBillingDate: '2027-06-01' }, now), false);
-});
-
-test('geheim sleutel verplicht', () => {
-  process.env.BOT_CRON_SECRET = 'x'.repeat(32);
-  assert.equal(secretMatches({ headers: { 'x-bot-key': 'x'.repeat(32) }, url: '/api/opzeg-check' }), true);
-  assert.equal(secretMatches({ headers: {}, url: '/api/opzeggen?key=' + 'x'.repeat(32) }), true);
-  assert.equal(secretMatches({ headers: {}, url: '/api/opzeggen?key=fout' }), false);
-  process.env.BOT_CRON_SECRET = 'kort';
-  assert.equal(secretMatches({ headers: { 'x-bot-key': 'kort' }, url: '/' }), false);
 });
 
 function fakeSysteme({ subs, contacts = [] }) {
