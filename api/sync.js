@@ -25,10 +25,20 @@ export function extractContactRef(body) {
   return { id, email };
 }
 
+// Alleen de veldnamen van een seintje (geen waarden), om het formaat van Systeme.io te kunnen zien.
+export function bodyShape(value, depth = 0) {
+  if (value === null || typeof value !== 'object') return typeof value;
+  if (depth > 3) return '…';
+  if (Array.isArray(value)) return [value.length ? bodyShape(value[0], depth + 1) : 'leeg'];
+  return Object.fromEntries(Object.keys(value).slice(0, 30).map(k => [k, bodyShape(value[k], depth + 1)]));
+}
+
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return res.status(405).end();
+  console.log('Bot sync seintje:', { type: req.headers?.['content-type'] || '', shape: JSON.stringify(bodyShape(req.body)).slice(0, 800) });
   const { id, email } = extractContactRef(req.body || {});
+  if (!id && !email) console.log('Bot sync: geen contact gevonden in seintje');
   if (!id && !email) return res.status(200).json({ ok: true, skipped: true });
   try {
     let contact = null;
