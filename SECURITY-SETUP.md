@@ -45,3 +45,15 @@ Lokale tests: `node --test tests/*.test.js tests/*.test.mjs`.
 - Iedereen met een toegangstag houdt die tag. Het contactveld **Bot status** bepaalt of de Bot gebruikt mag worden: leeg (lifetime) of "abonnee sinds …" = toegang, "gestopt per …" = geen toegang.
 - Workflow in Systeme.io ("Nieuwe verkoop", "Verkoop geannuleerd", "Betaling van abonnement mislukt") stuurt een webhook naar `https://bot.meestermasha.nl/api/sync`.
 - De Bot vertrouwt de webhook niet: hij zoekt het contact en de abonnementen zelf op in Systeme.io en zet daarna het veld. Bij inloggen en bij "blijf ingelogd" wordt de status van abonnees opnieuw opgehaald.
+
+## Automatisch opzeggen
+
+- Opzegformulier (meestermasha.nl/opzeggen-bot) → workflow in Systeme.io ("Ingeschreven via funnelformulier", Opzeggen Bot) → webhook naar `https://bot.meestermasha.nl/api/opzeggen?key=<BOT_CRON_SECRET>`.
+- De Bot zoekt het abonnement zelf op:
+  - na het eerste jaar: direct opzeggen per einde van de lopende betaalperiode (`WhenBillingPeriodEnds`);
+  - in het eerste jaar: contactveld **Bot opzegging** = "gepland: opzeggen op JJJJ-MM-DD …" en tag `bot-opzegging-gepland`. De dagelijkse controle zegt op zodra de laatste maand van het eerste jaar begint (dag na de twaalfde betaling), zodat het abonnement precies na twaalf maanden stopt.
+- Tags voor mails aan Masha (automatiseringen in Systeme.io): `bot-opzegging-verwerkt` (ter info) en `bot-opzegging-handmatig` (zelf regelen; reden staat in het veld Bot opzegging).
+- Dagelijkse controle: Cloudflare Worker `bot-dagelijkse-check` (code in `workers/dagelijkse-check.js`, cron `0 7 * * *`) roept `POST /api/opzeg-check` aan met header `x-bot-key`.
+- Secret `BOT_CRON_SECRET` (minimaal 24 tekens) in het Pages-project én in de Worker.
+- Herroepen blijft handwerk (terugbetalen via Mollie).
+- Opgezegd maar betaalde periode loopt nog: de klant houdt toegang tot het einde van die periode.
