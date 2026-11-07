@@ -3,12 +3,13 @@
 // Geen geheime sleutel nodig: het opzegformulier zelf is openbaar, dus een sleutel voegt niets toe.
 // Het seintje zelf wordt niet vertrouwd: de Bot zoekt het contact en het abonnement zelf op in Systeme.io.
 import { findContact, getContact } from '../lib/systeme.js';
-import { extractContactRef } from './sync.js';
+import { extractContactRef, bodyShape } from './sync.js';
 import { processCancellation } from '../lib/opzegging.js';
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return res.status(405).end();
+  console.log('Bot opzegging seintje:', { type: req.headers?.['content-type'] || '', shape: JSON.stringify(bodyShape(req.body)).slice(0, 800) });
   const { id, email } = extractContactRef(req.body || {});
   try {
     let contact = null;
