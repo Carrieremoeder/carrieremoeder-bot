@@ -3,8 +3,10 @@
 import chat from '../../api/chat.js';
 import session from '../../api/session.js';
 import sync from '../../api/sync.js';
+import opzeggen from '../../api/opzeggen.js';
+import opzegCheck from '../../api/opzeg-check.js';
 
-const routes = { chat, session, sync };
+const routes = { chat, session, sync, opzeggen, 'opzeg-check': opzegCheck };
 
 function makeReq(request, body) {
   const url = new URL(request.url);
@@ -75,7 +77,7 @@ export async function onRequest(context) {
     if (text) {
       try { body = JSON.parse(text); } catch {
         // Webhooks kunnen ook als formulier binnenkomen.
-        if (name === 'sync') body = Object.fromEntries(new URLSearchParams(text));
+        if (['sync', 'opzeggen'].includes(name)) body = Object.fromEntries(new URLSearchParams(text));
         else return new Response(JSON.stringify({ error: 'Ongeldige aanvraag' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
     }
