@@ -9,7 +9,7 @@
 import { findContact, getContact, setLinkField } from '../lib/systeme.js';
 import { extractContactRef, bodyShape } from './sync.js';
 import { createHerroepToken, readHerroepToken, sameOrigin } from '../lib/security.js';
-import { confirmWithdrawal, euro, findWithdrawableSubscription, markPending, previewWithdrawal, reportManual } from '../lib/herroeping.js';
+import { confirmWithdrawal, euro, findWithdrawableSubscription, markPending, previewWithdrawal, reportManual, setReceivedMoment } from '../lib/herroeping.js';
 import { nl } from '../lib/opzegging.js';
 
 function publicUrl(req) {
@@ -54,6 +54,8 @@ async function handleWebhook(req, res) {
     if (id) { try { contact = await getContact(id); } catch (error) { if (error.status !== 404) throw error; } }
     if (!contact && email) contact = await findContact(email);
     if (!contact) { await reportManual(null, 'geen contact gevonden'); return res.status(200).json({ ok: false }); }
+    // Eerst het moment van ontvangst vastleggen: de wettelijke bevestiging noemt datum en tijd.
+    try { await setReceivedMoment(contact.id, new Date()); } catch (error) { console.error('Bot herroeping: moment niet vastgelegd', { status: error?.status || 0 }); }
     const found = await findWithdrawableSubscription(contact);
     if (!found.ok) {
       // De bevestigingsmail toont dan een link naar een pagina die zegt dat Masha het zelf afhandelt.
