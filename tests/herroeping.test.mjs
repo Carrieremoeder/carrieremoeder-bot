@@ -103,3 +103,35 @@ test('na herroepen geen toegang, ook niet als Systeme nog "actief" meldt', async
   fake({ sub: { ...sub, id: 60, createdAt: '2027-02-01T10:00:00Z', status: 'active' }, payment });
   assert.equal(canUseBot(await syncStatus(contact)), true);
 });
+
+test('Mollie-nummer wijkt af: betaling gevonden via e-mailadres van de klant', async () => {
+  const other = { ...payment, metadata: { sio_subscription_id: 999 }, customerId: 'cst_x' };
+  const calls = [];
+  globalThis.fetch = async (url, init = {}) => {
+    const u = new URL(url); const m = init.method || 'GET';
+    calls.push([m, u.host + u.pathname]);
+    if (u.host === 'api.mollie.com') {
+      if (u.pathname === '/v2/payments') return Response.json({ _embedded: { payments: [other] }, _links: {} });
+      if (u.pathname === '/v2/customers/cst_x') return Response.json({ email: 'Klant@Voorbeeld.nl' });
+    }
+    if (u.pathname === '/api/contacts/9') return Response.json({ id: 9, email: 'klant@voorbeeld.nl' });
+    if (u.pathname === '/api/payment/subscriptions') return Response.json({ items: [sub], hasMore: false });
+    return new Response('nf', { status: 404 });
+  };
+  const p = await previewWithdrawal(ref);
+  assert.equal(p.state, 'ready');
+  assert.equal(p.payment.id, 'tr_abc');
+});
+
+test('Mollie-nummer wijkt af en ander e-mailadres: niet gevonden', async () => {
+  const other = { ...payment, metadata: { sio_subscription_id: 999 }, customerId: 'cst_y' };
+  globalThis.fetch = async (url) => {
+    const u = new URL(url);
+    if (u.pathname === '/v2/payments') return Response.json({ _embedded: { payments: [other] }, _links: {} });
+    if (u.pathname === '/v2/customers/cst_y') return Response.json({ email: 'iemand@anders.nl' });
+    if (u.pathname === '/api/contacts/9') return Response.json({ id: 9, email: 'klant@voorbeeld.nl' });
+    if (u.pathname === '/api/payment/subscriptions') return Response.json({ items: [sub], hasMore: false });
+    return new Response('nf', { status: 404 });
+  };
+  assert.equal((await previewWithdrawal(ref)).state, 'no-payment');
+});
