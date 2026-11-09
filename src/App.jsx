@@ -2,6 +2,7 @@ import { readCoachReply } from "../lib/coachStream.js";
 import * as K from "./designTokens.js";
 import { useState, useEffect, useRef } from "react";
 import { tabSession, WARNING_MS } from "./browserSession.js";
+import AccountLinks from './AccountLinks.jsx';
 import EmailLogin, { readAuthReturn } from "./EmailLogin.jsx";
 
 async function api(path, options = {}) {
@@ -472,6 +473,7 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
             </div>
           ))}
           <CrisisNote style={{ padding: "16px", marginTop: "auto", fontSize: "11px", borderTop: `1px solid ${K.kleur.randStructuur}` }} />
+          <AccountLinks style={{ padding: "0 16px 16px" }} />
         </aside>}
 
         <main style={g.mainArea}>
