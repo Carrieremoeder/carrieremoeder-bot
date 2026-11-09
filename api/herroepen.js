@@ -6,7 +6,7 @@
 //   persoonlijke bevestigingslink (via de inlogmail).
 // GET ?t=…: de pagina achter die link. Laat zien wat er gebeurt en hoeveel de klant terugkrijgt.
 // POST met "t": de klant klikt op "Bevestigen". Abonnement stopt, toegang stopt, Mollie betaalt terug.
-import { findContact, getContact, sendLoginLink } from '../lib/systeme.js';
+import { findContact, getContact, setLinkField } from '../lib/systeme.js';
 import { extractContactRef, bodyShape } from './sync.js';
 import { createHerroepToken, readHerroepToken, sameOrigin } from '../lib/security.js';
 import { confirmWithdrawal, euro, findWithdrawableSubscription, previewWithdrawal, reportManual } from '../lib/herroeping.js';
@@ -55,10 +55,16 @@ async function handleWebhook(req, res) {
     if (!contact && email) contact = await findContact(email);
     if (!contact) { await reportManual(null, 'geen contact gevonden'); return res.status(200).json({ ok: false }); }
     const found = await findWithdrawableSubscription(contact);
-    if (!found.ok) { await reportManual(contact.id, found.reason); console.log('Bot herroeping:', { ok: false, reason: found.reason }); return res.status(200).json({ ok: false }); }
+    if (!found.ok) {
+      // De bevestigingsmail toont dan een link naar een pagina die zegt dat Masha het zelf afhandelt.
+      await setLinkField(contact, `${publicUrl(req)}/api/herroepen?t=handmatig`);
+      await reportManual(contact.id, found.reason);
+      console.log('Bot herroeping:', { ok: false, reason: found.reason });
+      return res.status(200).json({ ok: false });
+    }
     const token = createHerroepToken(contact.id, found.subscription.id, Date.now());
-    await sendLoginLink(contact, `${publicUrl(req)}/api/herroepen?t=${token}`);
-    console.log('Bot herroeping: bevestigingslink verstuurd');
+    await setLinkField(contact, `${publicUrl(req)}/api/herroepen?t=${token}`);
+    console.log('Bot herroeping: bevestigingslink klaargezet');
     return res.status(200).json({ ok: true });
   } catch (error) {
     console.error('Bot herroeping:', { type: error?.name || 'error', status: error?.status || 0, detail: String(error?.detail || error?.message || '').slice(0, 300) });
@@ -69,7 +75,10 @@ async function handleWebhook(req, res) {
 
 const INVALID = '<p>Deze link werkt niet (meer). Je herroeping is wel ontvangen; we handelen hem zelf voor je af.</p>';
 
+const MANUAL = '<p>Je herroeping is ontvangen. We kunnen hem niet automatisch afronden, dus we handelen hem zelf voor je af. Je hoort binnen 14 dagen van ons. Je hoeft verder niets te doen.</p>';
+
 async function showPreview(req, res, token) {
+  if (token === 'handmatig') return page(res, 'We regelen het voor je', MANUAL);
   const ref = readHerroepToken(token);
   if (!ref) return page(res, 'Link verlopen', INVALID, 400);
   const p = await previewWithdrawal(ref);
