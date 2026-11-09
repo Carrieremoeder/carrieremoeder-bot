@@ -9,7 +9,7 @@
 import { findContact, getContact, setLinkField } from '../lib/systeme.js';
 import { extractContactRef, bodyShape } from './sync.js';
 import { createHerroepToken, readHerroepToken, sameOrigin } from '../lib/security.js';
-import { confirmWithdrawal, euro, findWithdrawableSubscription, previewWithdrawal, reportManual } from '../lib/herroeping.js';
+import { confirmWithdrawal, euro, findWithdrawableSubscription, markPending, previewWithdrawal, reportManual } from '../lib/herroeping.js';
 import { nl } from '../lib/opzegging.js';
 
 function publicUrl(req) {
@@ -62,8 +62,10 @@ async function handleWebhook(req, res) {
       console.log('Bot herroeping:', { ok: false, reason: found.reason });
       return res.status(200).json({ ok: false });
     }
-    const token = createHerroepToken(contact.id, found.subscription.id, Date.now());
+    const receivedAt = Date.now();
+    const token = createHerroepToken(contact.id, found.subscription.id, receivedAt);
     await setLinkField(contact, `${publicUrl(req)}/api/herroepen?t=${token}`);
+    await markPending(contact.id, found.subscription.id, receivedAt);
     console.log('Bot herroeping: bevestigingslink klaargezet');
     return res.status(200).json({ ok: true });
   } catch (error) {

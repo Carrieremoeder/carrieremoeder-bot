@@ -60,6 +60,8 @@ Lokale tests: `node --test tests/*.test.js tests/*.test.mjs`.
 
 - Herroepingsformulier op meestermasha.nl/herroepen-bot → Systeme.io stuurt direct de wettelijke bevestiging én (workflow "Stuur webhook") een seintje naar `https://bot.meestermasha.nl/api/herroepen`.
 - De Bot zoekt zelf het abonnement op. Minder dan 14 dagen oud → de klant krijgt via de bestaande inlogmail (veld `bot_inloglink` + tag `bot-inloglink`) een persoonlijke, ondertekende link (7 dagen geldig). Zo kan niemand andermans abonnement stopzetten.
+- Klikt de klant niet, dan verwerkt de dagelijkse controle (/api/opzeg-check) de herroeping na 3 dagen zelf (veld Bot opzegging: "herroeping ontvangen … automatisch verwerken vanaf …"). Het bedrag wordt berekend tot het moment van het formulier.
+- Veld `bot_herroeping` bevat de uitkomst in woorden voor de klant; de workflow stuurt 4 dagen na het formulier de afrondingsmail met {bot_herroeping}.
 - De link opent een bevestigingspagina met het terug te betalen bedrag. Na "Bevestigen": abonnement direct stoppen in Systeme.io, veld Bot status = "herroepen per …" (geen toegang meer), terugbetaling via Mollie naar rato van de begonnen dagen.
 - De Mollie-betaling wordt gevonden via de metadata `sio_subscription_id` die Systeme.io meegeeft. Een betaling die al (deels) is teruggestort, wordt nooit nog eens teruggestort; nooit meer dan betaald.
 - Geheim in Cloudflare: `MOLLIE_API_KEY` (live-sleutel uit Mollie → Developers → API-sleutels). Zonder sleutel: melding aan Masha, zij betaalt zelf terug.

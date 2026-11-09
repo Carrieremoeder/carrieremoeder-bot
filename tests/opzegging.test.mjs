@@ -83,7 +83,7 @@ test('dagelijkse check zegt op als het moment daar is', async () => {
     contacts: [contact(20, '2027-11-08'), contact(21, '2027-12-08'), { id: 22, tags: [], fields: [] }]
   });
   const summary = await runDueCancellations(D('2027-11-09'));
-  assert.deepEqual(summary, { checked: 2, cancelled: 1, waiting: 1, manual: 0 });
+  assert.deepEqual(summary, { checked: 2, cancelled: 1, waiting: 1, manual: 0, withdrawn: 0 });
   assert.ok(calls.some(c => c[1] === '/api/payment/subscriptions/70/cancel'));
   assert.ok(!calls.some(c => c[1] === '/api/payment/subscriptions/71/cancel'));
 });

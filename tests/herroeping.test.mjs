@@ -135,3 +135,21 @@ test('Mollie-nummer wijkt af en ander e-mailadres: niet gevonden', async () => {
   };
   assert.equal((await previewWithdrawal(ref)).state, 'no-payment');
 });
+
+import { pendingWithdrawal, processDueWithdrawal, markPending } from '../lib/herroeping.js';
+
+test('openstaande herroeping: na 3 dagen automatisch verwerkt, eerder niet', async () => {
+  let patches = [];
+  fake({ sub, payment });
+  const orig = globalThis.fetch;
+  globalThis.fetch = async (url, init = {}) => { if ((init.method || 'GET') === 'PATCH') patches.push(JSON.parse(init.body)); return orig(url, init); };
+  const rcv = Date.now();
+  await markPending('9', '55', rcv);
+  const value = patches.find(p => /^herroeping ontvangen/.test(p.fields[0].value)).fields[0].value;
+  const pending = pendingWithdrawal({ id: 9, fields: [{ slug: 'bot_opzegging', value }] });
+  assert.equal(pending.subscriptionId, '55');
+  assert.equal(await processDueWithdrawal(pending, new Date(rcv + 2 * 86_400_000)), 'waiting');
+  patches = [];
+  assert.equal(await processDueWithdrawal(pending, new Date(rcv + 3 * 86_400_000 + 1000)), 'done');
+  assert.ok(patches.some(p => /^Je abonnement is gestopt op/.test(p.fields[0].value)));
+});
