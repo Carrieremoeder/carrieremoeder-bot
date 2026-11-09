@@ -55,5 +55,13 @@ Lokale tests: `node --test tests/*.test.js tests/*.test.mjs`.
 - Lukt het niet: tag `bot-opzegging-handmatig` (automatisering in Systeme.io mailt Masha; de reden staat in het veld Bot opzegging). Elke opzegging geeft Masha daarnaast de bestaande meldingsmail.
 - Dagelijkse controle: Cloudflare Worker `bot-dagelijkse-check` (code in `workers/dagelijkse-check.js`, cron `0 7 * * *`) roept `POST /api/opzeg-check` aan.
 - Geen geheime sleutel: het opzegformulier is openbaar (een sleutel voegt niets toe) en de dagelijkse controle zegt alleen op wat al gepland staat.
-- Herroepen blijft handwerk (terugbetalen via Mollie).
+
+## Automatisch herroepen (binnen 14 dagen)
+
+- Herroepingsformulier op meestermasha.nl/herroepen-bot → Systeme.io stuurt direct de wettelijke bevestiging én (workflow "Stuur webhook") een seintje naar `https://bot.meestermasha.nl/api/herroepen`.
+- De Bot zoekt zelf het abonnement op. Minder dan 14 dagen oud → de klant krijgt via de bestaande inlogmail (veld `bot_inloglink` + tag `bot-inloglink`) een persoonlijke, ondertekende link (7 dagen geldig). Zo kan niemand andermans abonnement stopzetten.
+- De link opent een bevestigingspagina met het terug te betalen bedrag. Na "Bevestigen": abonnement direct stoppen in Systeme.io, veld Bot status = "herroepen per …" (geen toegang meer), terugbetaling via Mollie naar rato van de begonnen dagen.
+- De Mollie-betaling wordt gevonden via de metadata `sio_subscription_id` die Systeme.io meegeeft. Een betaling die al (deels) is teruggestort, wordt nooit nog eens teruggestort; nooit meer dan betaald.
+- Geheim in Cloudflare: `MOLLIE_API_KEY` (live-sleutel uit Mollie → Developers → API-sleutels). Zonder sleutel: melding aan Masha, zij betaalt zelf terug.
+- Lukt iets niet (bedenktijd voorbij, betaling niet gevonden, stoppen of terugbetalen mislukt): veld Bot opzegging krijgt "handmatig regelen (herroeping: …)" en de tag `bot-opzegging-handmatig` mailt Masha.
 - Opgezegd maar betaalde periode loopt nog: de klant houdt toegang tot het einde van die periode.
