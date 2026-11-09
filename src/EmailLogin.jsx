@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import * as K from './designTokens.js';
 import { tabSession } from './browserSession.js';
+import AccountLinks from './AccountLinks.jsx';
 
 // Inloggen zonder wachtwoord: de klant vult zijn e-mailadres in en ontvangt via Systeme.io een inloglink.
 export function readAuthReturn(location) {
@@ -68,5 +69,6 @@ export default function EmailLogin({ api, onLogin, notice, styles: g }) {
     </form>}
     {step === 'sent' && <button type="button" style={{ ...linkStyle, marginTop: '4px' }} onClick={() => { setStep('email'); setMessage(''); }}>← Ander e-mailadres gebruiken</button>}
     <p style={{ fontSize: '12px', color: K.kleur.tekstMeta, marginTop: '22px', lineHeight: 1.7 }}>Gebruik het e-mailadres waarmee je Always In Control Bot hebt gekocht.</p>
+    <AccountLinks style={{ marginTop: '28px', paddingTop: '14px', borderTop: `1px solid ${K.kleur.randVeld}` }} />
   </div>;
 }
