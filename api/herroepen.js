@@ -28,7 +28,7 @@ function page(res, title, bodyHtml, status = 200) {
   res.status(status);
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'");
-  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Referrer-Policy', 'same-origin');
   res.setHeader('X-Robots-Tag', 'noindex');
   return res.end(`<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)} · Always In Control Bot</title>
 <style>
@@ -103,7 +103,10 @@ async function showPreview(req, res, token) {
 }
 
 async function confirm(req, res, token) {
-  if (!sameOrigin(req)) return page(res, 'Niet gelukt', '<p>Open de link uit je e-mail opnieuw en probeer het nog een keer.</p>', 403);
+  // "no-referrer" liet browsers Origin: null sturen; daarom ook Sec-Fetch-Site accepteren.
+  // De echte beveiliging is de ondertekende link (t) in het formulier.
+  const fromOwnPage = sameOrigin(req) || req.headers?.['sec-fetch-site'] === 'same-origin';
+  if (!fromOwnPage) return page(res, 'Niet gelukt', '<p>Open de link uit je e-mail opnieuw en probeer het nog een keer.</p>', 403);
   const ref = readHerroepToken(token);
   if (!ref) return page(res, 'Link verlopen', INVALID, 400);
   const result = await confirmWithdrawal(ref);
