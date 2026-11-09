@@ -151,5 +151,5 @@ test('openstaande herroeping: na 3 dagen automatisch verwerkt, eerder niet', asy
   assert.equal(await processDueWithdrawal(pending, new Date(rcv + 2 * 86_400_000)), 'waiting');
   patches = [];
   assert.equal(await processDueWithdrawal(pending, new Date(rcv + 3 * 86_400_000 + 1000)), 'done');
-  assert.ok(patches.some(p => /^Je abonnement is gestopt op/.test(p.fields[0].value)));
+  assert.ok(patches.some(p => /^Je herroeping is afgerond/.test(p.fields[0].value)));
 });
