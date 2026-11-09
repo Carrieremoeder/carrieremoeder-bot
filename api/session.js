@@ -7,7 +7,7 @@ import { hasAnswered, saveConsent } from '../lib/consent.js';
 async function freshAccess(contact) {
   if (!contact) return false;
   // Abonnees én gestopte abonnees opnieuw controleren: wie alsnog betaalt, krijgt zo vanzelf weer toegang.
-  if (/^(abonnee|gestopt)/i.test(currentStatus(contact))) {
+  if (/^(abonnee|gestopt|herroepen)/i.test(currentStatus(contact))) {
     try { contact = await syncStatus(contact); } catch (error) { console.error('Bot status:', { status: error?.status || 0, detail: String(error?.detail || error?.message || '').slice(0, 200) }); }
   }
   return canUseBot(contact);
