@@ -79,7 +79,7 @@ function BrandHeader({ loggedIn = false, loading = false, sidebarOpen, onMenu, o
   return <header style={g.hdr} className="hdr-bar">
     <div style={g.hdrLeft} className="hdr-brand">
       {loggedIn && <button type="button" style={K.icoonKnop} onClick={onMenu} aria-label="Gesprekkenmenu" aria-expanded={sidebarOpen} aria-controls="gesprekkenmenu">☰</button>}
-      <img src="/meester-masha-logo.png" alt="Meester Masha" className="brand-logo" style={{ height: "38px", width: "auto", display: "block", flexShrink: 0, opacity: 0.85 }} />
+      <img src="/meester-masha-logo.png" alt="Meester Masha" className="brand-logo" style={{ height: "40px", width: "auto", display: "block", flexShrink: 0 }} />
       <span style={g.hdrDivider} className="hdr-divider" />
       <span style={g.sub} className="hdr-sub">Always In Control Bot</span>
     </div>
