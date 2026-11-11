@@ -8,7 +8,9 @@
 
 ## Geheime sleutels (Cloudflare → Settings → Variables and secrets, type Secret)
 
-- `OPENAI_API_KEY`: API-sleutel van OpenAI.
+- `AZURE_OPENAI_API_KEY`: sleutel van Microsoft Azure OpenAI (Foundry → project carrieremoeder-7227 → Start → API-sleutel). Is deze ingesteld, dan loopt de AI-verwerking via de EU Data Zone (resource in Zweden, implementatie `gpt-5.6-luna`, type Data Zone Standard).
+- `OPENAI_API_KEY`: API-sleutel van OpenAI. Wordt alleen gebruikt als vangnet bij een storing, time-out of drukte bij Azure, of als er (nog) geen Azure-sleutel is. Bij een weigering door het inhoudsfilter van Azure gaat het bericht níet naar OpenAI; de gebruiker krijgt dan een rustige melding met 112 en Veilig Thuis.
+- Optioneel: `AZURE_OPENAI_ENDPOINT` (standaard `https://carrieremoeder-7227-resource.openai.azure.com/openai/v1`) en `AZURE_OPENAI_DEPLOYMENT` (standaard `gpt-5.6-luna`).
 - `SYSTEME_API_KEY`: API-sleutel van Systeme.io (Profiel → Public API keys).
 - `BOT_SESSION_SECRET`: minimaal 32 willekeurige tekens. Wijzigen logt iedereen uit en maakt openstaande inloglinks ongeldig.
 

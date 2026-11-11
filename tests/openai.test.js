@@ -7,6 +7,9 @@ test('OpenAI coach contract and authentication', async t => {
   process.env.BOT_SESSION_SECRET = 'test-secret-'.repeat(4);
   process.env.OPENAI_API_KEY = 'test-only';
   delete process.env.BOT_MODEL;
+  delete process.env.AZURE_OPENAI_API_KEY;
+  delete process.env.AZURE_OPENAI_ENDPOINT;
+  delete process.env.AZURE_OPENAI_DEPLOYMENT;
   const token = setSession({ setHeader() {} }, 'TEST-CODE');
   const originalFetch = globalThis.fetch;
   t.after(() => { globalThis.fetch = originalFetch; });
