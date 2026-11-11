@@ -122,9 +122,9 @@ function ConsentScreen({ styles: g, onAnswer, onLogout, saving, error }) {
 }
 
 const QUICK_CHOICES = [
-  { tint: "#FBF7F0", title: "Ik heb een bericht van mijn ex ontvangen", detail: "Kopieer het bericht (in WhatsApp: lang drukken → Kopiëren) en vervang namen door bijvoorbeeld \"mijn ex\".", draft: "Ik heb dit bericht van mijn ex ontvangen: " },
-  { tint: "#F4EEE5", title: "Ik wil zelf een bericht aan mijn ex sturen", detail: "Vind woorden die duidelijk zijn en bij jouw grenzen passen.", draft: "Ik wil zelf een bericht aan mijn ex sturen. Dit wil ik duidelijk maken: " },
-  { tint: "#EEF0E9", title: "Ik wil een gesprek voorbereiden", detail: "Bereid een gesprek met je ex voor, zodat je rustig en met regie het gesprek ingaat.", draft: "Ik wil een gesprek met mijn ex voorbereiden. Het gesprek gaat over: " }
+  { tint: "#F3ECE1", edge: "#D9CBB4", title: "Ik heb een bericht van mijn ex ontvangen", detail: "Kopieer het bericht (in WhatsApp: lang drukken → Kopiëren) en vervang namen door bijvoorbeeld \"mijn ex\".", draft: "Ik heb dit bericht van mijn ex ontvangen: " },
+  { tint: "#F3E9E4", edge: "#D9C3B8", title: "Ik wil zelf een bericht aan mijn ex sturen", detail: "Vind woorden die duidelijk zijn en bij jouw grenzen passen.", draft: "Ik wil zelf een bericht aan mijn ex sturen. Dit wil ik duidelijk maken: " },
+  { tint: "#ECEEE6", edge: "#C8CEBD", title: "Ik wil een gesprek voorbereiden", detail: "Bereid een gesprek met je ex voor, zodat je rustig en met regie het gesprek ingaat.", draft: "Ik wil een gesprek met mijn ex voorbereiden. Het gesprek gaat over: " }
 ];
 
 export default function App() {
@@ -496,7 +496,7 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
                 <h2 style={g.emptyH}>Wat houdt je nu bezig?</h2>
                 <p style={g.emptyP}>Kies waar je mee aan de slag wilt, of typ direct je situatie in het tekstvak.</p>
                 <div className="quick-choices" style={g.quickBtns}>{QUICK_CHOICES.map(q => (
-                  <button type="button" className="quick-card" key={q.title} style={{ ...g.quickBtn, background: q.tint }} onClick={() => { setInput(q.draft); setTimeout(() => { const t = taRef.current; if (t) { t.focus(); t.setSelectionRange(q.draft.length, q.draft.length); t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 120) + "px"; } }, 0); }}>
+                  <button type="button" className="quick-card" key={q.title} style={{ ...g.quickBtn, background: q.tint, border: `1px solid ${q.edge}`, borderLeft: `4px solid ${q.edge}` }} onClick={() => { setInput(q.draft); setTimeout(() => { const t = taRef.current; if (t) { t.focus(); t.setSelectionRange(q.draft.length, q.draft.length); t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 120) + "px"; } }, 0); }}>
                     <span style={g.quickTitle}>{q.title}</span>
                     <span style={g.quickDetail}>{q.detail}</span>
                   </button>
