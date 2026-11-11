@@ -67,19 +67,19 @@ const g = {
   sendBtn: disabled => ({ ...K.actieKnop, padding: "10px 18px", minHeight: "44px", fontSize: "13px", opacity: disabled ? 0.45 : 1 }),
   attachBtn: active => ({ ...K.secundaireKnop, padding: "10px 14px", minHeight: "44px", fontSize: "13px", background: active ? C.light : "transparent" }),
   dot: delay => ({ display: "inline-block", width: "5px", height: "5px", borderRadius: "50%", background: C.terra, margin: "0 2px", animation: "bounce 1.2s ease-in-out infinite", animationDelay: delay }),
-  emptyWrap: { padding: "0 0 20px", maxWidth: "740px", margin: "0 auto" },
-  emptyH: { ...K.serifKop("40px"), margin: "0 0 12px" },
-  emptyP: { fontSize: "14px", color: K.kleur.tekstZacht, lineHeight: 1.65, margin: 0, maxWidth: "540px" },
-  quickBtns: { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "12px", margin: "20px 0 6px" },
-  quickBtn: { display: "flex", flexDirection: "column", alignItems: "flex-start", textAlign: "left", padding: "18px 16px", background: C.white, border: `1px solid ${C.border}`, color: C.dark, cursor: "pointer", fontFamily: K.font.sans },
-  quickTitle: { fontSize: "14px", fontWeight: 600, lineHeight: 1.35 },
-  quickDetail: { fontSize: "12px", color: K.kleur.tekstZacht, lineHeight: 1.5, margin: "6px 0 0" },
+  emptyWrap: { padding: "24px 0 36px", maxWidth: "760px", margin: "0 auto" },
+  emptyH: { ...K.serifKop("40px"), margin: "0 0 16px" },
+  emptyP: { fontSize: "14px", color: K.kleur.tekstZacht, lineHeight: 1.75, margin: 0, maxWidth: "560px" },
+  quickBtns: { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "18px", margin: "36px 0 32px" },
+  quickBtn: { display: "flex", flexDirection: "column", alignItems: "flex-start", textAlign: "left", padding: "24px 22px", background: C.white, border: `1px solid ${C.border}`, color: C.dark, cursor: "pointer", fontFamily: K.font.sans },
+  quickTitle: { fontSize: "15px", fontWeight: 500, lineHeight: 1.4 },
+  quickDetail: { fontSize: "13px", color: K.kleur.tekstZacht, lineHeight: 1.6, margin: "10px 0 0" },
 };
 function BrandHeader({ loggedIn = false, loading = false, sidebarOpen, onMenu, onLogout }) {
   return <header style={g.hdr} className="hdr-bar">
     <div style={g.hdrLeft} className="hdr-brand">
       {loggedIn && <button type="button" style={K.icoonKnop} onClick={onMenu} aria-label="Gesprekkenmenu" aria-expanded={sidebarOpen} aria-controls="gesprekkenmenu">☰</button>}
-      <img src="/meester-masha-logo.png" alt="Meester Masha" className="brand-logo" style={{ height: "52px", width: "auto", display: "block", flexShrink: 0 }} />
+      <img src="/meester-masha-logo.png" alt="Meester Masha" className="brand-logo" style={{ height: "38px", width: "auto", display: "block", flexShrink: 0, opacity: 0.85 }} />
       <span style={g.hdrDivider} className="hdr-divider" />
       <span style={g.sub} className="hdr-sub">Always In Control Bot</span>
     </div>
@@ -421,7 +421,7 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
 @media(max-width:720px){
 .hdr-bar{padding:12px max(14px,env(safe-area-inset-right)) 12px max(14px,env(safe-area-inset-left))!important}.hdr-brand{flex:1 1 180px;flex-wrap:wrap;gap:8px!important}
 .hdr-sub{font-size:9px!important;white-space:normal!important;overflow-wrap:anywhere}.hdr-divider{display:none!important}
-.brand-logo{height:44px!important}.hdr-bar>button{padding:8px!important;font-size:9px!important}
+.brand-logo{height:32px!important}.hdr-bar>button{padding:8px!important;font-size:9px!important}
 .chat-sidebar{position:absolute;inset:0 auto 0 0;z-index:20;width:min(280px,85vw)!important;min-width:0!important}
 .menu-backdrop{display:block;position:absolute;inset:0;background:rgba(28,20,16,.22);border:0;z-index:19}
 .chat-messages{padding:24px 18px!important}.welcome{padding:0 0 18px!important}
@@ -464,7 +464,7 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
         {sidebarOpen && <aside id="gesprekkenmenu" aria-label="Gesprekken" className="chat-sidebar" style={g.sidebar}>
           <button style={g.newBtn} disabled={loading} onClick={newConversation}>+ Nieuw gesprek</button>
           <div style={g.sideHeader}>Gesprekken</div>
-          <div style={{ padding: "0 16px 10px", fontSize: "11px", lineHeight: 1.5, color: C.muted }}>Gesprekken worden niet bewaard. Ze verdwijnen als je uitlogt of dit tabblad sluit. Wil je een gesprek houden? Kies "Gesprek downloaden" en bewaar het bestand op een plek waar alleen jij bij kunt.</div>
+          <div style={{ padding: "0 16px 14px", fontSize: "11px", lineHeight: 1.6, color: C.muted }}>Gesprekken worden niet bewaard. Wil je er een houden? Kies "Gesprek downloaden".</div>
           {conversations.length === 0 && <div style={{ padding: "10px 16px", fontSize: "12px", color: C.muted }}>Nog geen gesprekken</div>}
           {conversations.map(conv => (
             <div key={conv.id} style={g.convItem(conv.id === activeId)}>
@@ -472,8 +472,8 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
               <div style={g.convDate}>{conv.date} <button type="button" disabled={loading} aria-label="Gesprek verwijderen" onClick={e => { e.stopPropagation(); deleteConversation(conv.id); }} style={{ border: "none", background: "transparent", color: C.muted, cursor: "pointer", float: "right" }}>Verwijder</button></div>
             </div>
           ))}
-          <CrisisNote style={{ padding: "16px", marginTop: "auto", fontSize: "11px", borderTop: `1px solid ${K.kleur.randStructuur}` }} />
-          <AccountLinks style={{ padding: "0 16px 16px" }} />
+          <CrisisNote style={{ padding: "20px 16px 14px", marginTop: "auto", fontSize: "11px", lineHeight: 1.65, borderTop: `1px solid ${K.kleur.randStructuur}` }} />
+          <AccountLinks style={{ padding: "0 16px 20px" }} />
         </aside>}
 
         <main style={g.mainArea}>
@@ -502,13 +502,12 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
                   </button>
                 ))}</div>
                 <input ref={fileRef} type="file" accept=".txt,text/plain" style={{ display: "none" }} onChange={e => { importConversation(e.target.files?.[0]); e.target.value = ""; }} />
-                <p style={{ ...g.emptyP, fontSize: "12px", marginTop: "4px" }}>
-                  <button type="button" onClick={() => fileRef.current?.click()} style={{ background: "none", border: "none", padding: 0, color: C.dark, textDecoration: "underline", textUnderlineOffset: "3px", cursor: "pointer", fontSize: "12px" }}>Verder met een eerder gesprek</button>
-                  {" "}· kies een gesprek dat je eerder hebt gedownload. Het bestand wordt alleen op je eigen apparaat gelezen.
+                <p style={{ ...g.emptyP, fontSize: "13px" }}>
+                  <button type="button" onClick={() => fileRef.current?.click()} style={{ background: "none", border: "none", padding: 0, color: C.dark, textDecoration: "underline", textUnderlineOffset: "3px", cursor: "pointer", fontSize: "13px" }}>Verder met een eerder gesprek</button>
+                  {" "}· kies een gesprek dat je eerder hebt gedownload.
                 </p>
-                <p style={{ ...g.emptyP, fontSize: "12px", marginTop: "8px" }}>Je gesprekken worden niet opgeslagen. Ze verdwijnen als je uitlogt of dit tabblad sluit. Je kunt een gesprek wel zelf downloaden; bewaar het bestand op een plek waar alleen jij bij kunt.</p>
-                <p style={{ ...g.emptyP, fontSize: "12px", marginTop: "8px" }}>Je praat met een AI-coach, niet met een mens. AI kan fouten maken; dit is geen juridisch, therapeutisch of medisch advies.</p>
-                <CrisisNote style={{ marginTop: "10px", maxWidth: "540px" }} />
+                <p style={{ ...g.emptyP, fontSize: "12px", color: C.muted, marginTop: "14px" }}>Je praat met een AI-coach, niet met een mens; dit is geen juridisch, therapeutisch of medisch advies. Gesprekken worden niet opgeslagen: download zelf wat je wilt houden.</p>
+                {!sidebarOpen && <CrisisNote style={{ marginTop: "14px", maxWidth: "560px", fontSize: "12px" }} />}
               </div>}
               {lightMode && <p role="status" style={{ fontSize: "12px", color: K.kleur.tekstZacht, lineHeight: 1.5, margin: "0 0 8px" }}>Je hebt vandaag je berichten met de uitgebreide coach gebruikt. De coach helpt je verder in een lichtere versie. Morgen staat de uitgebreide coach weer voor je klaar.</p>}
               {chatError && <p role="alert" style={g.err}>{chatError} Je bericht staat nog klaar om opnieuw te versturen.</p>}
