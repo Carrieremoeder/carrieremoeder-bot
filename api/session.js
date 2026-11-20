@@ -14,7 +14,7 @@ async function freshAccess(contact) {
 }
 
 const RESEND_COOLDOWN_MS = 60 * 1000;
-const SENT_MESSAGE = 'Als dit e-mailadres toegang heeft tot de Bot, ontvang je binnen een paar minuten een inloglink. Controleer ook je spammap. Geen mail ontvangen? Gebruik het e-mailadres waarmee je de Bot hebt gekocht.';
+const SENT_MESSAGE = 'Als dit e-mailadres toegang heeft tot de Bot, ontvang je binnen een paar minuten een inloglink. Controleer ook je spammap. Geen mail ontvangen? Gebruik het e-mailadres waarmee je de Bot hebt gekocht. Heb je herroepen of opgezegd, dan is je toegang gestopt. Vragen? Mail naar info@meestermasha.nl.';
 
 function publicUrl(req) {
   const configured = process.env.BOT_PUBLIC_URL;
